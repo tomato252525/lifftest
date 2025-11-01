@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>時間記録 LIFF</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 16px; }
+    .hidden { display: none; }
+    .row { margin: 12px 0; }
+    button { padding: 10px 16px; }
+    .msg { margin-top: 12px; color: #333; }
+    .error { color: #b00020; }
+    .ok { color: #0a7d00; }
+  </style>
+</head>
+<body>
+  <h1>時間記録</h1>
+  <div id="loading">初期化中...</div>
+
+  <section id="registerSection" class="hidden">
+    <div class="row">
+      <label>ユーザー名</label><br />
+      <input id="userName" type="text" placeholder="例) 山田 太郎" />
+    </div>
+    <button id="registerBtn">登録する</button>
+  </section>
+
+  <section id="recordSection" class="hidden">
+    <div class="row">
+      <label>時間（HH:MM）</label><br />
+      <input id="time" type="time" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" />
+    </div>
+    <button id="recordBtn">記録する</button>
+  </section>
+
+  <div id="message" class="msg"></div>
+
+  <script>
+    const LIFF_ID = '2008402680-n8rP92vY';
+    const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwsFhT7MRU9xZN3GLqitXgbmQGJQt1BbrNloNssrTDuCObVZtVXY7LqSWzwM3Uprun9/exec';
+
+    let idToken = null;
+
+    const $ = (sel) => document.querySelector(sel);
+    const show = (el, visible) => el.classList.toggle('hidden', !visible);
+    const msg = (text, isError = false) => {
+      const el = $('#message');
+      el.textContent = text || '';
+      el.className = 'msg ' + (isError ? 'error' : 'ok');
+    };
+
+    const validateTime = (t) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(t);
+
+    async function postToGas(action, params = {}) {
+      const body = new URLSearchParams({ action, idToken, ...params }).toString();
+      const res = await fetch(GAS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      // Apps Scriptは基本200を返すためJSONで成否を判断
+      const json = await res.json();
+      return json;
+    }
+
+    async function init() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        idToken = liff.getIDToken();
+        if (!idToken) throw new Error('IDトークンが取得できませんでした');
+
+        // 登録済み確認
+        const checkRes = await postToGas('check');
+        if (!checkRes.ok) throw new Error(checkRes.message || '登録確認に失敗しました');
+
+        if (checkRes.registered) {
+          // 時間入力モード
+          show($('#loading'), false);
+          show($('#registerSection'), false);
+          show($('#recordSection'), true);
+          msg('時間を入力して「記録する」を押してください。', false);
+        } else {
+          // 初回登録モード
+          // 任意: プロフィールから初期値取得
+          try {
+            const profile = await liff.getProfile();
+            $('#userName').value = profile?.displayName || '';
+          } catch (e) {
+            // 取れない場合は無視
+          }
+          show($('#loading'), false);
+          show($('#registerSection'), true);
+          show($('#recordSection'), false);
+          msg('ユーザー名を入力して「登録する」を押してください。', false);
+        }
+      } catch (e) {
+        show($('#loading'), false);
+        msg(e.message || '初期化に失敗しました', true);
+      }
+    }
+
+    $('#registerBtn').addEventListener('click', async () => {
+      const userName = ($('#userName').value || '').trim();
+      if (!userName) return msg('ユーザー名を入力してください', true);
+
+      msg('登録中...', false);
+      const res = await postToGas('register', { userName });
+      if (res.ok) {
+        msg('登録が完了しました。時間記録画面に切り替えます。', false);
+        show($('#registerSection'), false);
+        show($('#recordSection'), true);
+      } else {
+        msg(res.message || '登録に失敗しました', true);
+      }
+    });
+
+    $('#recordBtn').addEventListener('click', async () => {
+      const time = ($('#time').value || '').trim();
+      if (!validateTime(time)) return msg('時間は HH:MM 形式で入力してください（例: 09:30）', true);
+      msg('送信中...', false);
+      const res = await postToGas('record', { time });
+      if (res.ok) {
+        msg('記録が完了しました。', false);
+        $('#time').value = '';
+      } else {
+        msg(res.message || '記録に失敗しました', true);
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
