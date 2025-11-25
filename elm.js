@@ -5186,9 +5186,9 @@ var $author$project$Main$AdminData = F4(
 		return {isInLineApp: isInLineApp, publishStatus: publishStatus, rooms: rooms, users: users};
 	});
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
-var $author$project$Main$Cast = F3(
-	function (id, name, schedule) {
-		return {id: id, name: name, schedule: schedule};
+var $author$project$Main$Cast = F4(
+	function (id, name, note, schedule) {
+		return {id: id, name: name, note: note, schedule: schedule};
 	});
 var $author$project$Main$DailySchedule = F2(
 	function (request, confirmedShift) {
@@ -5508,15 +5508,20 @@ var $author$project$Main$castDecoder = A3(
 	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 	'schedule',
 	$elm$json$Json$Decode$dict($author$project$Main$dailyScheduleDecoder),
-	A3(
-		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-		'name',
+	A4(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
+		'note',
 		$elm$json$Json$Decode$string,
+		'',
 		A3(
 			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-			'id',
+			'name',
 			$elm$json$Json$Decode$string,
-			$elm$json$Json$Decode$succeed($author$project$Main$Cast))));
+			A3(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+				'id',
+				$elm$json$Json$Decode$string,
+				$elm$json$Json$Decode$succeed($author$project$Main$Cast)))));
 var $elm$json$Json$Decode$list = _Json_decodeList;
 var $author$project$Main$PublishStatus = function (isPublished) {
 	return {isPublished: isPublished};
@@ -5905,6 +5910,36 @@ var $author$project$Main$viewDateRows = F2(
 		return _List_fromArray(
 			[topRow, bottomRow]);
 	});
+var $author$project$Main$viewNoteCell = function (cast) {
+	return A2(
+		$elm$html$Html$td,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('border border-black p-2 bg-yellow-50 text-sm')
+			]),
+		_List_fromArray(
+			[
+				$elm$core$String$isEmpty(cast.note) ? $elm$html$Html$text('-') : $elm$html$Html$text(cast.note)
+			]));
+};
+var $author$project$Main$viewNotesRow = function (casts) {
+	return A2(
+		$elm$html$Html$tr,
+		_List_Nil,
+		A2(
+			$elm$core$List$cons,
+			A2(
+				$elm$html$Html$td,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('border border-black bg-yellow-50 font-bold text-center p-2')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('備考')
+					])),
+			A2($elm$core$List$map, $author$project$Main$viewNoteCell, casts)));
+};
 var $author$project$Main$viewUserHeader = function (cast) {
 	return A2(
 		$elm$html$Html$th,
@@ -5952,10 +5987,18 @@ var $author$project$Main$viewScheduleTable = F2(
 					A2(
 					$elm$html$Html$tbody,
 					_List_Nil,
-					A2(
-						$elm$core$List$concatMap,
-						$author$project$Main$viewDateRows(casts),
-						dateList))
+					$elm$core$List$concat(
+						_List_fromArray(
+							[
+								A2(
+								$elm$core$List$concatMap,
+								$author$project$Main$viewDateRows(casts),
+								dateList),
+								_List_fromArray(
+								[
+									$author$project$Main$viewNotesRow(casts)
+								])
+							])))
 				]));
 	});
 var $author$project$Main$viewDesktopLayout = function (data) {
@@ -6008,6 +6051,8 @@ var $author$project$Main$viewError = function (maybeError) {
 	}
 };
 var $elm$html$Html$h3 = _VirtualDom_node('h3');
+var $elm$core$Basics$not = _Basics_not;
+var $elm$html$Html$strong = _VirtualDom_node('strong');
 var $author$project$Main$viewMobileDateRow = F2(
 	function (cast, date) {
 		var maybeData = A2($elm$core$Dict$get, date, cast.schedule);
@@ -6113,6 +6158,23 @@ var $author$project$Main$viewMobileUserCard = F2(
 						[
 							$elm$html$Html$text(cast.name)
 						])),
+					(!$elm$core$String$isEmpty(cast.note)) ? A2(
+					$elm$html$Html$div,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('bg-yellow-50 p-2 mb-2 rounded text-sm border border-yellow-200')
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$strong,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('備考: ')
+								])),
+							$elm$html$Html$text(cast.note)
+						])) : $elm$html$Html$text(''),
 					A2(
 					$elm$html$Html$div,
 					_List_Nil,

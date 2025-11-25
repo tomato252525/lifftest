@@ -29,7 +29,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
         // 今週と来週の月曜リスト (クエリ結合用)
         const targetMondays = [currentMonday, nextMonday];
 
-        // 全てのデータを並列で取得 (パフォーマンス改善)
+        // 全てのデータを並列で取得
         const [
             usersResult,
             requestsResult,
@@ -39,7 +39,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
         ] = await Promise.all([
             // 1. ユーザー
             db.from('users')
-                .select('id, name')
+                .select('id, name, note')
                 .eq('role', 'cast')
                 .eq('is_active', true)
                 .order('name'),
@@ -123,6 +123,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
         const formattedUsers = usersResult.data.map(u => ({
             id: u.id,
             name: u.name,
+            note: u.note,
             schedule: scheduleMap[u.id] || {}
         }));
 
@@ -142,52 +143,11 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
             app.ports.deliverError?.send(typeof e === 'string' ? e : e?.message || 'Unknown error');
         };
 
-        // シフト保存・公開
-        app.ports.publishShiftsRequest?.subscribe(async (payload) => {
-            if (!db || !currentUserId) return;
-            try {
-                const { week_start_date, shifts } = payload;
-
-                // Note: DBカラムとElmからのペイロード名が一致しているか要確認
-                const shiftsToUpsert = shifts.map(s => ({
-                    cast_id: s.cast_id,
-                    date: s.date,
-                    week_start_date: week_start_date,
-                    start_time: s.start_time,
-                    end_time: s.end_time,
-                    state: s.state,
-                    exit_by_end_time: s.exit_by_end_time,
-                    note: s.note || '',
-                    room_id: s.room_id,
-                    manager_id: currentUserId
-                }));
-
-                // Promise.allで並列実行可能 (依存関係がないため)
-                const [shiftRes, pubRes] = await Promise.all([
-                    db.from('confirmed_shifts')
-                        .upsert(shiftsToUpsert, { onConflict: 'cast_id, date' }), // 複合キー指定のスペース削除推奨
-
-                    db.from('shift_publish_status')
-                        .upsert({ week_start_date: week_start_date, is_published: true }, { onConflict: 'week_start_date' })
-                ]);
-
-                if (shiftRes.error) throw shiftRes.error;
-                if (pubRes.error) throw pubRes.error;
-
-                // 保存後の再取得
-                const newData = await loadInitialScheduleData();
-                app.ports.publishShiftsResponse?.send(newData);
-            } catch (e) {
-                sendError(e);
-            }
-        });
-
-        // 認証・初期化処理 (変更なし)
+        // 認証・初期化処理
         liff.init({
             liffId,
             withLoginOnExternalBrowser: true
         }).then(async () => {
-            // ... (元の認証ロジックそのまま) ...
             if (!liff.isLoggedIn()) {
                 liff.login();
                 return;
