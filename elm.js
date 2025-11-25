@@ -5215,6 +5215,17 @@ var $author$project$Main$RequestDetail = F3(
 	function (startTime, endTime, exitByEndTime) {
 		return {endTime: endTime, exitByEndTime: exitByEndTime, startTime: startTime};
 	});
+var $author$project$Main$removeSeconds = function (timeStr) {
+	var _v0 = A2($elm$core$String$split, ':', timeStr);
+	if (_v0.b && _v0.b.b) {
+		var hour = _v0.a;
+		var _v1 = _v0.b;
+		var minute = _v1.a;
+		return hour + (':' + minute);
+	} else {
+		return timeStr;
+	}
+};
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 	function (key, valDecoder, decoder) {
@@ -5231,11 +5242,11 @@ var $author$project$Main$requestDetailDecoder = A3(
 	A3(
 		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 		'endTime',
-		$elm$json$Json$Decode$string,
+		A2($elm$json$Json$Decode$map, $author$project$Main$removeSeconds, $elm$json$Json$Decode$string),
 		A3(
 			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 			'startTime',
-			$elm$json$Json$Decode$string,
+			A2($elm$json$Json$Decode$map, $author$project$Main$removeSeconds, $elm$json$Json$Decode$string),
 			$elm$json$Json$Decode$succeed($author$project$Main$RequestDetail))));
 var $author$project$Main$requestStatusDecoder = A2(
 	$elm$json$Json$Decode$andThen,
@@ -5355,11 +5366,11 @@ var $author$project$Main$shiftDecoder = A3(
 				A3(
 					$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 					'endTime',
-					$elm$json$Json$Decode$string,
+					A2($elm$json$Json$Decode$map, $author$project$Main$removeSeconds, $elm$json$Json$Decode$string),
 					A3(
 						$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 						'startTime',
-						$elm$json$Json$Decode$string,
+						A2($elm$json$Json$Decode$map, $author$project$Main$removeSeconds, $elm$json$Json$Decode$string),
 						A3(
 							$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 							'id',
@@ -5705,12 +5716,83 @@ var $elm$html$Html$tbody = _VirtualDom_node('tbody');
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$thead = _VirtualDom_node('thead');
 var $elm$html$Html$tr = _VirtualDom_node('tr');
+var $author$project$Main$formatDateShort = function (dateStr) {
+	var _v0 = A2($elm$core$String$split, '-', dateStr);
+	if (((_v0.b && _v0.b.b) && _v0.b.b.b) && (!_v0.b.b.b.b)) {
+		var _v1 = _v0.b;
+		var month = _v1.a;
+		var _v2 = _v1.b;
+		var day = _v2.a;
+		return month + ('/' + day);
+	} else {
+		return dateStr;
+	}
+};
+var $elm$core$List$drop = F2(
+	function (n, list) {
+		drop:
+		while (true) {
+			if (n <= 0) {
+				return list;
+			} else {
+				if (!list.b) {
+					return list;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs;
+					n = $temp$n;
+					list = $temp$list;
+					continue drop;
+				}
+			}
+		}
+	});
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $author$project$Main$getDayOfWeek = function (dateStr) {
+	var _v0 = A2($elm$core$String$split, '-', dateStr);
+	if (((_v0.b && _v0.b.b) && _v0.b.b.b) && (!_v0.b.b.b.b)) {
+		var yearStr = _v0.a;
+		var _v1 = _v0.b;
+		var monthStr = _v1.a;
+		var _v2 = _v1.b;
+		var dayStr = _v2.a;
+		var _v3 = _Utils_Tuple3(
+			$elm$core$String$toInt(yearStr),
+			$elm$core$String$toInt(monthStr),
+			$elm$core$String$toInt(dayStr));
+		if (((_v3.a.$ === 'Just') && (_v3.b.$ === 'Just')) && (_v3.c.$ === 'Just')) {
+			var year = _v3.a.a;
+			var month = _v3.b.a;
+			var day = _v3.c.a;
+			var y = (month < 3) ? (year - 1) : year;
+			var yy = A2($elm$core$Basics$modBy, 100, y);
+			var weekdays = _List_fromArray(
+				['土', '日', '月', '火', '水', '木', '金']);
+			var m = (month < 3) ? (month + 12) : month;
+			var c = (y / 100) | 0;
+			var h = A2($elm$core$Basics$modBy, 7, ((((day + (((13 * (m + 1)) / 5) | 0)) + yy) + ((yy / 4) | 0)) + ((c / 4) | 0)) - (2 * c));
+			return A2(
+				$elm$core$Maybe$withDefault,
+				'',
+				$elm$core$List$head(
+					A2($elm$core$List$drop, h, weekdays)));
+		} else {
+			return '';
+		}
+	} else {
+		return '';
+	}
+};
 var $elm$html$Html$Attributes$rowspan = function (n) {
 	return A2(
 		_VirtualDom_attribute,
 		'rowspan',
 		$elm$core$String$fromInt(n));
 };
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $elm$html$Html$td = _VirtualDom_node('td');
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
@@ -5890,11 +5972,13 @@ var $author$project$Main$viewDateRows = F2(
 					_List_fromArray(
 						[
 							$elm$html$Html$Attributes$class('border border-black bg-green-50 font-bold text-center align-middle'),
-							$elm$html$Html$Attributes$rowspan(2)
+							$elm$html$Html$Attributes$rowspan(2),
+							A2($elm$html$Html$Attributes$style, 'white-space', 'pre-line')
 						]),
 					_List_fromArray(
 						[
-							$elm$html$Html$text(dateString)
+							$elm$html$Html$text(
+							$author$project$Main$formatDateShort(dateString) + ('\n(' + ($author$project$Main$getDayOfWeek(dateString) + ')')))
 						])),
 				A2(
 					$elm$core$List$map,
@@ -5945,7 +6029,9 @@ var $author$project$Main$viewUserHeader = function (cast) {
 		$elm$html$Html$th,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('border border-black bg-gray-300 p-2')
+				$elm$html$Html$Attributes$class('border border-black bg-gray-300 p-2'),
+				A2($elm$html$Html$Attributes$style, 'writing-mode', 'vertical-rl'),
+				A2($elm$html$Html$Attributes$style, 'text-orientation', 'upright')
 			]),
 		_List_fromArray(
 			[
@@ -6074,7 +6160,8 @@ var $author$project$Main$viewMobileDateRow = F2(
 							]),
 						_List_fromArray(
 							[
-								$elm$html$Html$text(date)
+								$elm$html$Html$text(
+								$author$project$Main$formatDateShort(date) + (' (' + ($author$project$Main$getDayOfWeek(date) + ')')))
 							])),
 						A2(
 						$elm$html$Html$div,
