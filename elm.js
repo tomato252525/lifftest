@@ -80,6 +80,190 @@ function A9(fun, a, b, c, d, e, f, g, h, i) {
 console.warn('Compiled in DEV mode. Follow the advice at https://elm-lang.org/0.19.1/optimize for better performance and smaller assets.');
 
 
+// EQUALITY
+
+function _Utils_eq(x, y)
+{
+	for (
+		var pair, stack = [], isEqual = _Utils_eqHelp(x, y, 0, stack);
+		isEqual && (pair = stack.pop());
+		isEqual = _Utils_eqHelp(pair.a, pair.b, 0, stack)
+		)
+	{}
+
+	return isEqual;
+}
+
+function _Utils_eqHelp(x, y, depth, stack)
+{
+	if (x === y)
+	{
+		return true;
+	}
+
+	if (typeof x !== 'object' || x === null || y === null)
+	{
+		typeof x === 'function' && _Debug_crash(5);
+		return false;
+	}
+
+	if (depth > 100)
+	{
+		stack.push(_Utils_Tuple2(x,y));
+		return true;
+	}
+
+	/**/
+	if (x.$ === 'Set_elm_builtin')
+	{
+		x = $elm$core$Set$toList(x);
+		y = $elm$core$Set$toList(y);
+	}
+	if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin')
+	{
+		x = $elm$core$Dict$toList(x);
+		y = $elm$core$Dict$toList(y);
+	}
+	//*/
+
+	/**_UNUSED/
+	if (x.$ < 0)
+	{
+		x = $elm$core$Dict$toList(x);
+		y = $elm$core$Dict$toList(y);
+	}
+	//*/
+
+	for (var key in x)
+	{
+		if (!_Utils_eqHelp(x[key], y[key], depth + 1, stack))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+var _Utils_equal = F2(_Utils_eq);
+var _Utils_notEqual = F2(function(a, b) { return !_Utils_eq(a,b); });
+
+
+
+// COMPARISONS
+
+// Code in Generate/JavaScript.hs, Basics.js, and List.js depends on
+// the particular integer values assigned to LT, EQ, and GT.
+
+function _Utils_cmp(x, y, ord)
+{
+	if (typeof x !== 'object')
+	{
+		return x === y ? /*EQ*/ 0 : x < y ? /*LT*/ -1 : /*GT*/ 1;
+	}
+
+	/**/
+	if (x instanceof String)
+	{
+		var a = x.valueOf();
+		var b = y.valueOf();
+		return a === b ? 0 : a < b ? -1 : 1;
+	}
+	//*/
+
+	/**_UNUSED/
+	if (typeof x.$ === 'undefined')
+	//*/
+	/**/
+	if (x.$[0] === '#')
+	//*/
+	{
+		return (ord = _Utils_cmp(x.a, y.a))
+			? ord
+			: (ord = _Utils_cmp(x.b, y.b))
+				? ord
+				: _Utils_cmp(x.c, y.c);
+	}
+
+	// traverse conses until end of a list or a mismatch
+	for (; x.b && y.b && !(ord = _Utils_cmp(x.a, y.a)); x = x.b, y = y.b) {} // WHILE_CONSES
+	return ord || (x.b ? /*GT*/ 1 : y.b ? /*LT*/ -1 : /*EQ*/ 0);
+}
+
+var _Utils_lt = F2(function(a, b) { return _Utils_cmp(a, b) < 0; });
+var _Utils_le = F2(function(a, b) { return _Utils_cmp(a, b) < 1; });
+var _Utils_gt = F2(function(a, b) { return _Utils_cmp(a, b) > 0; });
+var _Utils_ge = F2(function(a, b) { return _Utils_cmp(a, b) >= 0; });
+
+var _Utils_compare = F2(function(x, y)
+{
+	var n = _Utils_cmp(x, y);
+	return n < 0 ? $elm$core$Basics$LT : n ? $elm$core$Basics$GT : $elm$core$Basics$EQ;
+});
+
+
+// COMMON VALUES
+
+var _Utils_Tuple0_UNUSED = 0;
+var _Utils_Tuple0 = { $: '#0' };
+
+function _Utils_Tuple2_UNUSED(a, b) { return { a: a, b: b }; }
+function _Utils_Tuple2(a, b) { return { $: '#2', a: a, b: b }; }
+
+function _Utils_Tuple3_UNUSED(a, b, c) { return { a: a, b: b, c: c }; }
+function _Utils_Tuple3(a, b, c) { return { $: '#3', a: a, b: b, c: c }; }
+
+function _Utils_chr_UNUSED(c) { return c; }
+function _Utils_chr(c) { return new String(c); }
+
+
+// RECORDS
+
+function _Utils_update(oldRecord, updatedFields)
+{
+	var newRecord = {};
+
+	for (var key in oldRecord)
+	{
+		newRecord[key] = oldRecord[key];
+	}
+
+	for (var key in updatedFields)
+	{
+		newRecord[key] = updatedFields[key];
+	}
+
+	return newRecord;
+}
+
+
+// APPEND
+
+var _Utils_append = F2(_Utils_ap);
+
+function _Utils_ap(xs, ys)
+{
+	// append Strings
+	if (typeof xs === 'string')
+	{
+		return xs + ys;
+	}
+
+	// append Lists
+	if (!xs.b)
+	{
+		return ys;
+	}
+	var root = _List_Cons(xs.a, ys);
+	xs = xs.b
+	for (var curr = root; xs.b; xs = xs.b) // WHILE_CONS
+	{
+		curr = curr.b = _List_Cons(xs.a, ys);
+	}
+	return root;
+}
+
+
+
 var _List_Nil_UNUSED = { $: 0 };
 var _List_Nil = { $: '[]' };
 
@@ -605,190 +789,6 @@ function _Debug_regionToString(region)
 		return 'on line ' + region.start.line;
 	}
 	return 'on lines ' + region.start.line + ' through ' + region.end.line;
-}
-
-
-
-// EQUALITY
-
-function _Utils_eq(x, y)
-{
-	for (
-		var pair, stack = [], isEqual = _Utils_eqHelp(x, y, 0, stack);
-		isEqual && (pair = stack.pop());
-		isEqual = _Utils_eqHelp(pair.a, pair.b, 0, stack)
-		)
-	{}
-
-	return isEqual;
-}
-
-function _Utils_eqHelp(x, y, depth, stack)
-{
-	if (x === y)
-	{
-		return true;
-	}
-
-	if (typeof x !== 'object' || x === null || y === null)
-	{
-		typeof x === 'function' && _Debug_crash(5);
-		return false;
-	}
-
-	if (depth > 100)
-	{
-		stack.push(_Utils_Tuple2(x,y));
-		return true;
-	}
-
-	/**/
-	if (x.$ === 'Set_elm_builtin')
-	{
-		x = $elm$core$Set$toList(x);
-		y = $elm$core$Set$toList(y);
-	}
-	if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin')
-	{
-		x = $elm$core$Dict$toList(x);
-		y = $elm$core$Dict$toList(y);
-	}
-	//*/
-
-	/**_UNUSED/
-	if (x.$ < 0)
-	{
-		x = $elm$core$Dict$toList(x);
-		y = $elm$core$Dict$toList(y);
-	}
-	//*/
-
-	for (var key in x)
-	{
-		if (!_Utils_eqHelp(x[key], y[key], depth + 1, stack))
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-var _Utils_equal = F2(_Utils_eq);
-var _Utils_notEqual = F2(function(a, b) { return !_Utils_eq(a,b); });
-
-
-
-// COMPARISONS
-
-// Code in Generate/JavaScript.hs, Basics.js, and List.js depends on
-// the particular integer values assigned to LT, EQ, and GT.
-
-function _Utils_cmp(x, y, ord)
-{
-	if (typeof x !== 'object')
-	{
-		return x === y ? /*EQ*/ 0 : x < y ? /*LT*/ -1 : /*GT*/ 1;
-	}
-
-	/**/
-	if (x instanceof String)
-	{
-		var a = x.valueOf();
-		var b = y.valueOf();
-		return a === b ? 0 : a < b ? -1 : 1;
-	}
-	//*/
-
-	/**_UNUSED/
-	if (typeof x.$ === 'undefined')
-	//*/
-	/**/
-	if (x.$[0] === '#')
-	//*/
-	{
-		return (ord = _Utils_cmp(x.a, y.a))
-			? ord
-			: (ord = _Utils_cmp(x.b, y.b))
-				? ord
-				: _Utils_cmp(x.c, y.c);
-	}
-
-	// traverse conses until end of a list or a mismatch
-	for (; x.b && y.b && !(ord = _Utils_cmp(x.a, y.a)); x = x.b, y = y.b) {} // WHILE_CONSES
-	return ord || (x.b ? /*GT*/ 1 : y.b ? /*LT*/ -1 : /*EQ*/ 0);
-}
-
-var _Utils_lt = F2(function(a, b) { return _Utils_cmp(a, b) < 0; });
-var _Utils_le = F2(function(a, b) { return _Utils_cmp(a, b) < 1; });
-var _Utils_gt = F2(function(a, b) { return _Utils_cmp(a, b) > 0; });
-var _Utils_ge = F2(function(a, b) { return _Utils_cmp(a, b) >= 0; });
-
-var _Utils_compare = F2(function(x, y)
-{
-	var n = _Utils_cmp(x, y);
-	return n < 0 ? $elm$core$Basics$LT : n ? $elm$core$Basics$GT : $elm$core$Basics$EQ;
-});
-
-
-// COMMON VALUES
-
-var _Utils_Tuple0_UNUSED = 0;
-var _Utils_Tuple0 = { $: '#0' };
-
-function _Utils_Tuple2_UNUSED(a, b) { return { a: a, b: b }; }
-function _Utils_Tuple2(a, b) { return { $: '#2', a: a, b: b }; }
-
-function _Utils_Tuple3_UNUSED(a, b, c) { return { a: a, b: b, c: c }; }
-function _Utils_Tuple3(a, b, c) { return { $: '#3', a: a, b: b, c: c }; }
-
-function _Utils_chr_UNUSED(c) { return c; }
-function _Utils_chr(c) { return new String(c); }
-
-
-// RECORDS
-
-function _Utils_update(oldRecord, updatedFields)
-{
-	var newRecord = {};
-
-	for (var key in oldRecord)
-	{
-		newRecord[key] = oldRecord[key];
-	}
-
-	for (var key in updatedFields)
-	{
-		newRecord[key] = updatedFields[key];
-	}
-
-	return newRecord;
-}
-
-
-// APPEND
-
-var _Utils_append = F2(_Utils_ap);
-
-function _Utils_ap(xs, ys)
-{
-	// append Strings
-	if (typeof xs === 'string')
-	{
-		return xs + ys;
-	}
-
-	// append Lists
-	if (!xs.b)
-	{
-		return ys;
-	}
-	var root = _List_Cons(xs.a, ys);
-	xs = xs.b
-	for (var curr = root; xs.b; xs = xs.b) // WHILE_CONS
-	{
-		curr = curr.b = _List_Cons(xs.a, ys);
-	}
-	return root;
 }
 
 
@@ -4378,70 +4378,10 @@ function _Browser_load(url)
 		}
 	}));
 }
-
-
-
-var _Bitwise_and = F2(function(a, b)
-{
-	return a & b;
-});
-
-var _Bitwise_or = F2(function(a, b)
-{
-	return a | b;
-});
-
-var _Bitwise_xor = F2(function(a, b)
-{
-	return a ^ b;
-});
-
-function _Bitwise_complement(a)
-{
-	return ~a;
-};
-
-var _Bitwise_shiftLeftBy = F2(function(offset, a)
-{
-	return a << offset;
-});
-
-var _Bitwise_shiftRightBy = F2(function(offset, a)
-{
-	return a >> offset;
-});
-
-var _Bitwise_shiftRightZfBy = F2(function(offset, a)
-{
-	return a >>> offset;
-});
 var $elm$core$Basics$EQ = {$: 'EQ'};
+var $elm$core$Basics$GT = {$: 'GT'};
 var $elm$core$Basics$LT = {$: 'LT'};
 var $elm$core$List$cons = _List_cons;
-var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
-var $elm$core$Array$foldr = F3(
-	function (func, baseCase, _v0) {
-		var tree = _v0.c;
-		var tail = _v0.d;
-		var helper = F2(
-			function (node, acc) {
-				if (node.$ === 'SubTree') {
-					var subTree = node.a;
-					return A3($elm$core$Elm$JsArray$foldr, helper, acc, subTree);
-				} else {
-					var values = node.a;
-					return A3($elm$core$Elm$JsArray$foldr, func, acc, values);
-				}
-			});
-		return A3(
-			$elm$core$Elm$JsArray$foldr,
-			helper,
-			A3($elm$core$Elm$JsArray$foldr, func, baseCase, tail),
-			tree);
-	});
-var $elm$core$Array$toList = function (array) {
-	return A3($elm$core$Array$foldr, $elm$core$List$cons, _List_Nil, array);
-};
 var $elm$core$Dict$foldr = F3(
 	function (func, acc, t) {
 		foldr:
@@ -4494,7 +4434,30 @@ var $elm$core$Set$toList = function (_v0) {
 	var dict = _v0.a;
 	return $elm$core$Dict$keys(dict);
 };
-var $elm$core$Basics$GT = {$: 'GT'};
+var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
+var $elm$core$Array$foldr = F3(
+	function (func, baseCase, _v0) {
+		var tree = _v0.c;
+		var tail = _v0.d;
+		var helper = F2(
+			function (node, acc) {
+				if (node.$ === 'SubTree') {
+					var subTree = node.a;
+					return A3($elm$core$Elm$JsArray$foldr, helper, acc, subTree);
+				} else {
+					var values = node.a;
+					return A3($elm$core$Elm$JsArray$foldr, func, acc, values);
+				}
+			});
+		return A3(
+			$elm$core$Elm$JsArray$foldr,
+			helper,
+			A3($elm$core$Elm$JsArray$foldr, func, baseCase, tail),
+			tree);
+	});
+var $elm$core$Array$toList = function (array) {
+	return A3($elm$core$Array$foldr, $elm$core$List$cons, _List_Nil, array);
+};
 var $elm$core$Result$Err = function (a) {
 	return {$: 'Err', a: a};
 };
@@ -5209,55 +5172,28 @@ var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
-		{appState: $author$project$Main$Loading, editingCell: $elm$core$Maybe$Nothing, error: $elm$core$Maybe$Nothing, isSaving: false},
+		{error: $elm$core$Maybe$Nothing, status: $author$project$Main$Loading},
 		$elm$core$Platform$Cmd$none);
 };
-var $author$project$Main$GotData = function (a) {
-	return {$: 'GotData', a: a};
+var $author$project$Main$ReceiveError = function (a) {
+	return {$: 'ReceiveError', a: a};
 };
-var $author$project$Main$GotError = function (a) {
-	return {$: 'GotError', a: a};
+var $author$project$Main$ReceivedData = function (a) {
+	return {$: 'ReceivedData', a: a};
 };
-var $author$project$Main$Published = function (a) {
-	return {$: 'Published', a: a};
-};
-var $elm$core$Platform$Sub$batch = _Platform_batch;
-var $elm$json$Json$Decode$value = _Json_decodeValue;
-var $author$project$Main$deliverAdminData = _Platform_incomingPort('deliverAdminData', $elm$json$Json$Decode$value);
-var $elm$json$Json$Decode$string = _Json_decodeString;
-var $author$project$Main$deliverError = _Platform_incomingPort('deliverError', $elm$json$Json$Decode$string);
-var $author$project$Main$publishShiftsResponse = _Platform_incomingPort('publishShiftsResponse', $elm$json$Json$Decode$value);
-var $author$project$Main$subscriptions = function (_v0) {
-	return $elm$core$Platform$Sub$batch(
-		_List_fromArray(
-			[
-				$author$project$Main$deliverAdminData($author$project$Main$GotData),
-				$author$project$Main$deliverError($author$project$Main$GotError),
-				$author$project$Main$publishShiftsResponse(
-				function (val) {
-					return $author$project$Main$Published(val);
-				})
-			]));
-};
-var $author$project$Main$Dashboard = function (a) {
-	return {$: 'Dashboard', a: a};
-};
-var $author$project$Main$AdminData = F8(
-	function (currentUser, weekStartDate, weekOffset, isPublished, casts, rooms, requests, confirmedShifts) {
-		return {casts: casts, confirmedShifts: confirmedShifts, currentUser: currentUser, isPublished: isPublished, requests: requests, rooms: rooms, weekOffset: weekOffset, weekStartDate: weekStartDate};
-	});
-var $elm$json$Json$Decode$field = _Json_decodeField;
-var $elm$json$Json$Decode$at = F2(
-	function (fields, decoder) {
-		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+var $author$project$Main$AdminData = F4(
+	function (users, rooms, publishStatus, isInLineApp) {
+		return {isInLineApp: isInLineApp, publishStatus: publishStatus, rooms: rooms, users: users};
 	});
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
-var $author$project$Main$ConfirmedShift = F8(
-	function (castId, date, startTime, endTime, exitByEndTime, state, note, roomId) {
-		return {castId: castId, date: date, endTime: endTime, exitByEndTime: exitByEndTime, note: note, roomId: roomId, startTime: startTime, state: state};
+var $author$project$Main$Cast = F3(
+	function (id, name, schedule) {
+		return {id: id, name: name, schedule: schedule};
 	});
-var $elm$json$Json$Decode$int = _Json_decodeInt;
-var $elm$json$Json$Decode$map8 = _Json_map8;
+var $author$project$Main$DailySchedule = F2(
+	function (request, confirmedShift) {
+		return {confirmedShift: confirmedShift, request: request};
+	});
 var $elm$json$Json$Decode$null = _Json_decodeNull;
 var $elm$json$Json$Decode$oneOf = _Json_oneOf;
 var $elm$json$Json$Decode$nullable = function (decoder) {
@@ -5268,41 +5204,176 @@ var $elm$json$Json$Decode$nullable = function (decoder) {
 				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder)
 			]));
 };
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
+var $author$project$Main$Available = function (a) {
+	return {$: 'Available', a: a};
+};
+var $author$project$Main$Holiday = {$: 'Holiday'};
+var $author$project$Main$NoData = {$: 'NoData'};
+var $elm$json$Json$Decode$andThen = _Json_andThen;
+var $elm$json$Json$Decode$field = _Json_decodeField;
+var $author$project$Main$RequestDetail = F3(
+	function (startTime, endTime, exitByEndTime) {
+		return {endTime: endTime, exitByEndTime: exitByEndTime, startTime: startTime};
 	});
-var $author$project$Main$confirmedDecoder = A9(
-	$elm$json$Json$Decode$map8,
-	$author$project$Main$ConfirmedShift,
-	A2($elm$json$Json$Decode$field, 'cast_id', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'date', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'start_time', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'end_time', $elm$json$Json$Decode$string),
-	A2(
-		$elm$json$Json$Decode$map,
-		$elm$core$Maybe$withDefault(false),
-		A2(
-			$elm$json$Json$Decode$field,
-			'exit_by_end_time',
-			$elm$json$Json$Decode$nullable($elm$json$Json$Decode$bool))),
-	A2($elm$json$Json$Decode$field, 'state', $elm$json$Json$Decode$string),
-	A2(
-		$elm$json$Json$Decode$map,
-		$elm$core$Maybe$withDefault(''),
-		A2(
-			$elm$json$Json$Decode$field,
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
+	function (key, valDecoder, decoder) {
+		return A2(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
+			A2($elm$json$Json$Decode$field, key, valDecoder),
+			decoder);
+	});
+var $elm$json$Json$Decode$string = _Json_decodeString;
+var $author$project$Main$requestDetailDecoder = A3(
+	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+	'exitByEndTime',
+	$elm$json$Json$Decode$bool,
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'endTime',
+		$elm$json$Json$Decode$string,
+		A3(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+			'startTime',
+			$elm$json$Json$Decode$string,
+			$elm$json$Json$Decode$succeed($author$project$Main$RequestDetail))));
+var $author$project$Main$requestStatusDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (t) {
+		switch (t) {
+			case 'Holiday':
+				return $elm$json$Json$Decode$succeed($author$project$Main$Holiday);
+			case 'Available':
+				return A2($elm$json$Json$Decode$map, $author$project$Main$Available, $author$project$Main$requestDetailDecoder);
+			default:
+				return $elm$json$Json$Decode$succeed($author$project$Main$NoData);
+		}
+	},
+	A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string));
+var $author$project$Main$Shift = F7(
+	function (id, startTime, endTime, roomId, note, state, exitByEndTime) {
+		return {endTime: endTime, exitByEndTime: exitByEndTime, id: id, note: note, roomId: roomId, startTime: startTime, state: state};
+	});
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
+var $elm$json$Json$Decode$decodeValue = _Json_run;
+var $elm$json$Json$Decode$value = _Json_decodeValue;
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder = F3(
+	function (path, valDecoder, fallback) {
+		var nullOr = function (decoder) {
+			return $elm$json$Json$Decode$oneOf(
+				_List_fromArray(
+					[
+						decoder,
+						$elm$json$Json$Decode$null(fallback)
+					]));
+		};
+		var handleResult = function (input) {
+			var _v0 = A2(
+				$elm$json$Json$Decode$decodeValue,
+				A2($elm$json$Json$Decode$at, path, $elm$json$Json$Decode$value),
+				input);
+			if (_v0.$ === 'Ok') {
+				var rawValue = _v0.a;
+				var _v1 = A2(
+					$elm$json$Json$Decode$decodeValue,
+					nullOr(valDecoder),
+					rawValue);
+				if (_v1.$ === 'Ok') {
+					var finalResult = _v1.a;
+					return $elm$json$Json$Decode$succeed(finalResult);
+				} else {
+					return A2(
+						$elm$json$Json$Decode$at,
+						path,
+						nullOr(valDecoder));
+				}
+			} else {
+				return $elm$json$Json$Decode$succeed(fallback);
+			}
+		};
+		return A2($elm$json$Json$Decode$andThen, handleResult, $elm$json$Json$Decode$value);
+	});
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
+	function (key, valDecoder, fallback, decoder) {
+		return A2(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
+			A3(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder,
+				_List_fromArray(
+					[key]),
+				valDecoder,
+				fallback),
+			decoder);
+	});
+var $author$project$Main$Absenteeism = {$: 'Absenteeism'};
+var $author$project$Main$Addition = {$: 'Addition'};
+var $author$project$Main$NoChange = {$: 'NoChange'};
+var $author$project$Main$TimeChange = {$: 'TimeChange'};
+var $author$project$Main$UnknownState = function (a) {
+	return {$: 'UnknownState', a: a};
+};
+var $author$project$Main$shiftStateDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (str) {
+		switch (str) {
+			case 'no_change':
+				return $elm$json$Json$Decode$succeed($author$project$Main$NoChange);
+			case 'time_change':
+				return $elm$json$Json$Decode$succeed($author$project$Main$TimeChange);
+			case 'absenteeism':
+				return $elm$json$Json$Decode$succeed($author$project$Main$Absenteeism);
+			case 'addition':
+				return $elm$json$Json$Decode$succeed($author$project$Main$Addition);
+			default:
+				var other = str;
+				return $elm$json$Json$Decode$succeed(
+					$author$project$Main$UnknownState(other));
+		}
+	},
+	$elm$json$Json$Decode$string);
+var $author$project$Main$shiftDecoder = A3(
+	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+	'exitByEndTime',
+	$elm$json$Json$Decode$bool,
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'state',
+		$author$project$Main$shiftStateDecoder,
+		A4(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
 			'note',
-			$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string))),
-	A2(
-		$elm$json$Json$Decode$field,
-		'room_id',
-		$elm$json$Json$Decode$nullable($elm$json$Json$Decode$int)));
+			$elm$json$Json$Decode$string,
+			'',
+			A3(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+				'roomId',
+				$elm$json$Json$Decode$nullable($elm$json$Json$Decode$int),
+				A3(
+					$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+					'endTime',
+					$elm$json$Json$Decode$string,
+					A3(
+						$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+						'startTime',
+						$elm$json$Json$Decode$string,
+						A3(
+							$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+							'id',
+							$elm$json$Json$Decode$int,
+							$elm$json$Json$Decode$succeed($author$project$Main$Shift))))))));
+var $author$project$Main$dailyScheduleDecoder = A3(
+	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+	'confirmedShift',
+	$elm$json$Json$Decode$nullable($author$project$Main$shiftDecoder),
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'request',
+		$author$project$Main$requestStatusDecoder,
+		$elm$json$Json$Decode$succeed($author$project$Main$DailySchedule)));
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Dict$Black = {$: 'Black'};
@@ -5426,115 +5497,151 @@ var $elm$core$Dict$fromList = function (assocs) {
 		$elm$core$Dict$empty,
 		assocs);
 };
-var $author$project$Main$dictFromList = function (list) {
-	return $elm$core$Dict$fromList(
-		A2(
-			$elm$core$List$map,
-			function (s) {
-				return _Utils_Tuple2(s.castId + ('_' + s.date), s);
-			},
-			list));
+var $elm$json$Json$Decode$keyValuePairs = _Json_decodeKeyValuePairs;
+var $elm$json$Json$Decode$dict = function (decoder) {
+	return A2(
+		$elm$json$Json$Decode$map,
+		$elm$core$Dict$fromList,
+		$elm$json$Json$Decode$keyValuePairs(decoder));
 };
+var $author$project$Main$castDecoder = A3(
+	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+	'schedule',
+	$elm$json$Json$Decode$dict($author$project$Main$dailyScheduleDecoder),
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'name',
+		$elm$json$Json$Decode$string,
+		A3(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+			'id',
+			$elm$json$Json$Decode$string,
+			$elm$json$Json$Decode$succeed($author$project$Main$Cast))));
 var $elm$json$Json$Decode$list = _Json_decodeList;
-var $author$project$Main$Request = F6(
-	function (userId, date, startTime, endTime, isAvailable, exitByEndTime) {
-		return {date: date, endTime: endTime, exitByEndTime: exitByEndTime, isAvailable: isAvailable, startTime: startTime, userId: userId};
+var $author$project$Main$PublishStatus = function (isPublished) {
+	return {isPublished: isPublished};
+};
+var $author$project$Main$publishStatusDecoder = $elm$json$Json$Decode$oneOf(
+	_List_fromArray(
+		[
+			A3(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+			'is_published',
+			$elm$json$Json$Decode$bool,
+			$elm$json$Json$Decode$succeed($author$project$Main$PublishStatus)),
+			$elm$json$Json$Decode$succeed(
+			$author$project$Main$PublishStatus(false))
+		]));
+var $author$project$Main$Room = F2(
+	function (id, name) {
+		return {id: id, name: name};
 	});
-var $elm$json$Json$Decode$map6 = _Json_map6;
-var $author$project$Main$requestDecoder = A7(
-	$elm$json$Json$Decode$map6,
-	$author$project$Main$Request,
-	A2($elm$json$Json$Decode$field, 'user_id', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'date', $elm$json$Json$Decode$string),
-	A2(
-		$elm$json$Json$Decode$field,
-		'start_time',
-		$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)),
-	A2(
-		$elm$json$Json$Decode$field,
-		'end_time',
-		$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)),
-	A2($elm$json$Json$Decode$field, 'is_available', $elm$json$Json$Decode$bool),
-	A2(
-		$elm$json$Json$Decode$map,
-		$elm$core$Maybe$withDefault(false),
-		A2(
-			$elm$json$Json$Decode$field,
-			'exit_by_end_time',
-			$elm$json$Json$Decode$nullable($elm$json$Json$Decode$bool))));
-var $author$project$Main$Room = F3(
-	function (id, name, roomType) {
-		return {id: id, name: name, roomType: roomType};
+var $author$project$Main$roomDecoder = A3(
+	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+	'name',
+	$elm$json$Json$Decode$string,
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'id',
+		$elm$json$Json$Decode$int,
+		$elm$json$Json$Decode$succeed($author$project$Main$Room)));
+var $author$project$Main$adminDataDecoder = A3(
+	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+	'isInClient',
+	$elm$json$Json$Decode$bool,
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'publishStatus',
+		$author$project$Main$publishStatusDecoder,
+		A3(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+			'rooms',
+			$elm$json$Json$Decode$list($author$project$Main$roomDecoder),
+			A3(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+				'users',
+				$elm$json$Json$Decode$list($author$project$Main$castDecoder),
+				$elm$json$Json$Decode$succeed($author$project$Main$AdminData)))));
+var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
 	});
-var $elm$json$Json$Decode$map3 = _Json_map3;
-var $author$project$Main$roomDecoder = A4(
-	$elm$json$Json$Decode$map3,
-	$author$project$Main$Room,
-	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
-	A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'room_type', $elm$json$Json$Decode$int));
-var $author$project$Main$User = F3(
-	function (id, name, role) {
-		return {id: id, name: name, role: role};
+var $author$project$Main$deliverError = _Platform_incomingPort('deliverError', $elm$json$Json$Decode$string);
+var $author$project$Main$deliverVerificationResult = _Platform_incomingPort('deliverVerificationResult', $elm$json$Json$Decode$value);
+var $author$project$Main$subscriptions = function (_v0) {
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				$author$project$Main$deliverVerificationResult(
+				A2(
+					$elm$core$Basics$composeR,
+					$elm$json$Json$Decode$decodeValue($author$project$Main$adminDataDecoder),
+					$author$project$Main$ReceivedData)),
+				$author$project$Main$deliverError($author$project$Main$ReceiveError)
+			]));
+};
+var $author$project$Main$Loaded = function (a) {
+	return {$: 'Loaded', a: a};
+};
+var $author$project$Main$update = F2(
+	function (msg, model) {
+		if (msg.$ === 'ReceivedData') {
+			var result = msg.a;
+			if (result.$ === 'Ok') {
+				var data = result.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							error: $elm$core$Maybe$Nothing,
+							status: $author$project$Main$Loaded(data)
+						}),
+					$elm$core$Platform$Cmd$none);
+			} else {
+				var decodeError = result.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							error: $elm$core$Maybe$Just(
+								'デコードエラー: ' + $elm$json$Json$Decode$errorToString(decodeError))
+						}),
+					$elm$core$Platform$Cmd$none);
+			}
+		} else {
+			var errMessage = msg.a;
+			return _Utils_Tuple2(
+				_Utils_update(
+					model,
+					{
+						error: $elm$core$Maybe$Just(errMessage)
+					}),
+				$elm$core$Platform$Cmd$none);
+		}
 	});
-var $author$project$Main$userDecoder = A4(
-	$elm$json$Json$Decode$map3,
-	$author$project$Main$User,
-	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string),
-	A2(
-		$elm$json$Json$Decode$map,
-		$elm$core$Maybe$withDefault('未設定'),
-		A2(
-			$elm$json$Json$Decode$field,
-			'name',
-			$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string))),
-	A2($elm$json$Json$Decode$field, 'role', $elm$json$Json$Decode$string));
-var $author$project$Main$adminDataDecoder = A9(
-	$elm$json$Json$Decode$map8,
-	$author$project$Main$AdminData,
-	A2($elm$json$Json$Decode$field, 'currentUser', $author$project$Main$userDecoder),
-	A2(
-		$elm$json$Json$Decode$at,
-		_List_fromArray(
-			['data', 'target_week_start_date']),
-		$elm$json$Json$Decode$string),
-	A2(
-		$elm$json$Json$Decode$at,
-		_List_fromArray(
-			['data', 'week_offset']),
-		$elm$json$Json$Decode$int),
-	A2(
-		$elm$json$Json$Decode$at,
-		_List_fromArray(
-			['data', 'is_published']),
-		$elm$json$Json$Decode$bool),
-	A2(
-		$elm$json$Json$Decode$at,
-		_List_fromArray(
-			['data', 'users']),
-		$elm$json$Json$Decode$list($author$project$Main$userDecoder)),
-	A2(
-		$elm$json$Json$Decode$at,
-		_List_fromArray(
-			['data', 'rooms']),
-		$elm$json$Json$Decode$list($author$project$Main$roomDecoder)),
-	A2(
-		$elm$json$Json$Decode$at,
-		_List_fromArray(
-			['data', 'requests']),
-		$elm$json$Json$Decode$list($author$project$Main$requestDecoder)),
-	A2(
-		$elm$json$Json$Decode$at,
-		_List_fromArray(
-			['data', 'confirmed_shifts']),
-		A2(
-			$elm$json$Json$Decode$map,
-			$author$project$Main$dictFromList,
-			$elm$json$Json$Decode$list($author$project$Main$confirmedDecoder))));
-var $elm$json$Json$Encode$int = _Json_wrap;
-var $author$project$Main$changeWeekRequest = _Platform_outgoingPort('changeWeekRequest', $elm$json$Json$Encode$int);
-var $elm$json$Json$Decode$decodeValue = _Json_run;
-var $elm$json$Json$Encode$bool = _Json_wrap;
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
+var $elm$html$Html$div = _VirtualDom_node('div');
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $elm$core$Maybe$map = F2(
 	function (f, maybe) {
 		if (maybe.$ === 'Just') {
@@ -5545,581 +5652,61 @@ var $elm$core$Maybe$map = F2(
 			return $elm$core$Maybe$Nothing;
 		}
 	});
-var $elm$json$Json$Encode$null = _Json_encodeNull;
-var $elm$json$Json$Encode$object = function (pairs) {
-	return _Json_wrap(
-		A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v0, obj) {
-					var k = _v0.a;
-					var v = _v0.b;
-					return A3(_Json_addField, k, v, obj);
-				}),
-			_Json_emptyObject(_Utils_Tuple0),
-			pairs));
+var $elm$core$List$sortBy = _List_sortBy;
+var $elm$core$List$sort = function (xs) {
+	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
 };
-var $elm$json$Json$Encode$string = _Json_wrap;
-var $author$project$Main$encodeConfirmed = function (s) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'cast_id',
-				$elm$json$Json$Encode$string(s.castId)),
-				_Utils_Tuple2(
-				'date',
-				$elm$json$Json$Encode$string(s.date)),
-				_Utils_Tuple2(
-				'start_time',
-				$elm$json$Json$Encode$string(s.startTime)),
-				_Utils_Tuple2(
-				'end_time',
-				$elm$json$Json$Encode$string(s.endTime)),
-				_Utils_Tuple2(
-				'exit_by_end_time',
-				$elm$json$Json$Encode$bool(s.exitByEndTime)),
-				_Utils_Tuple2(
-				'state',
-				$elm$json$Json$Encode$string(s.state)),
-				_Utils_Tuple2(
-				'note',
-				$elm$json$Json$Encode$string(s.note)),
-				_Utils_Tuple2(
-				'room_id',
-				A2(
-					$elm$core$Maybe$withDefault,
-					$elm$json$Json$Encode$null,
-					A2($elm$core$Maybe$map, $elm$json$Json$Encode$int, s.roomId)))
-			]));
-};
-var $elm$json$Json$Encode$list = F2(
-	function (func, entries) {
-		return _Json_wrap(
-			A3(
-				$elm$core$List$foldl,
-				_Json_addEntry(func),
-				_Json_emptyArray(_Utils_Tuple0),
-				entries));
-	});
-var $author$project$Main$encodePublish = F2(
-	function (weekStart, shifts) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'week_start_date',
-					$elm$json$Json$Encode$string(weekStart)),
-					_Utils_Tuple2(
-					'shifts',
-					A2($elm$json$Json$Encode$list, $author$project$Main$encodeConfirmed, shifts))
-				]));
-	});
-var $author$project$Main$publishShiftsRequest = _Platform_outgoingPort('publishShiftsRequest', $elm$core$Basics$identity);
-var $elm$core$List$takeReverse = F3(
-	function (n, list, kept) {
-		takeReverse:
-		while (true) {
-			if (n <= 0) {
-				return kept;
-			} else {
-				if (!list.b) {
-					return kept;
-				} else {
-					var x = list.a;
-					var xs = list.b;
-					var $temp$n = n - 1,
-						$temp$list = xs,
-						$temp$kept = A2($elm$core$List$cons, x, kept);
-					n = $temp$n;
-					list = $temp$list;
-					kept = $temp$kept;
-					continue takeReverse;
-				}
-			}
-		}
-	});
-var $elm$core$List$takeTailRec = F2(
-	function (n, list) {
-		return $elm$core$List$reverse(
-			A3($elm$core$List$takeReverse, n, list, _List_Nil));
-	});
-var $elm$core$List$takeFast = F3(
-	function (ctr, n, list) {
-		if (n <= 0) {
-			return _List_Nil;
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
 		} else {
-			var _v0 = _Utils_Tuple2(n, list);
-			_v0$1:
-			while (true) {
-				_v0$5:
-				while (true) {
-					if (!_v0.b.b) {
-						return list;
-					} else {
-						if (_v0.b.b.b) {
-							switch (_v0.a) {
-								case 1:
-									break _v0$1;
-								case 2:
-									var _v2 = _v0.b;
-									var x = _v2.a;
-									var _v3 = _v2.b;
-									var y = _v3.a;
-									return _List_fromArray(
-										[x, y]);
-								case 3:
-									if (_v0.b.b.b.b) {
-										var _v4 = _v0.b;
-										var x = _v4.a;
-										var _v5 = _v4.b;
-										var y = _v5.a;
-										var _v6 = _v5.b;
-										var z = _v6.a;
-										return _List_fromArray(
-											[x, y, z]);
-									} else {
-										break _v0$5;
-									}
-								default:
-									if (_v0.b.b.b.b && _v0.b.b.b.b.b) {
-										var _v7 = _v0.b;
-										var x = _v7.a;
-										var _v8 = _v7.b;
-										var y = _v8.a;
-										var _v9 = _v8.b;
-										var z = _v9.a;
-										var _v10 = _v9.b;
-										var w = _v10.a;
-										var tl = _v10.b;
-										return (ctr > 1000) ? A2(
-											$elm$core$List$cons,
-											x,
-											A2(
-												$elm$core$List$cons,
-												y,
-												A2(
-													$elm$core$List$cons,
-													z,
-													A2(
-														$elm$core$List$cons,
-														w,
-														A2($elm$core$List$takeTailRec, n - 4, tl))))) : A2(
-											$elm$core$List$cons,
-											x,
-											A2(
-												$elm$core$List$cons,
-												y,
-												A2(
-													$elm$core$List$cons,
-													z,
-													A2(
-														$elm$core$List$cons,
-														w,
-														A3($elm$core$List$takeFast, ctr + 1, n - 4, tl)))));
-									} else {
-										break _v0$5;
-									}
-							}
-						} else {
-							if (_v0.a === 1) {
-								break _v0$1;
-							} else {
-								break _v0$5;
-							}
-						}
-					}
-				}
-				return list;
-			}
-			var _v1 = _v0.b;
-			var x = _v1.a;
-			return _List_fromArray(
-				[x]);
+			return _default;
 		}
 	});
-var $elm$core$List$take = F2(
-	function (n, list) {
-		return A3($elm$core$List$takeFast, 0, n, list);
-	});
-var $author$project$Main$trimSeconds = function (time) {
+var $author$project$Main$getSampleDateList = function (data) {
 	return A2(
-		$elm$core$String$join,
-		':',
-		A2(
-			$elm$core$List$take,
-			2,
-			A2($elm$core$String$split, ':', time)));
-};
-var $author$project$Main$updateEditingCell = F2(
-	function (model, f) {
-		return _Utils_update(
-			model,
-			{
-				editingCell: A2($elm$core$Maybe$map, f, model.editingCell)
-			});
-	});
-var $elm$core$Dict$values = function (dict) {
-	return A3(
-		$elm$core$Dict$foldr,
-		F3(
-			function (key, value, valueList) {
-				return A2($elm$core$List$cons, value, valueList);
-			}),
+		$elm$core$Maybe$withDefault,
 		_List_Nil,
-		dict);
+		A2(
+			$elm$core$Maybe$map,
+			function (u) {
+				return $elm$core$List$sort(
+					$elm$core$Dict$keys(u.schedule));
+			},
+			$elm$core$List$head(data.users)));
 };
-var $author$project$Main$update = F2(
-	function (msg, model) {
-		update:
-		while (true) {
-			switch (msg.$) {
-				case 'GotData':
-					var json = msg.a;
-					var _v1 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$adminDataDecoder, json);
-					if (_v1.$ === 'Ok') {
-						var data = _v1.a;
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									appState: $author$project$Main$Dashboard(data),
-									isSaving: false
-								}),
-							$elm$core$Platform$Cmd$none);
-					} else {
-						var e = _v1.a;
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									error: $elm$core$Maybe$Just(
-										'Decode Error: ' + $elm$json$Json$Decode$errorToString(e))
-								}),
-							$elm$core$Platform$Cmd$none);
-					}
-				case 'GotError':
-					var e = msg.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								error: $elm$core$Maybe$Just(e)
-							}),
-						$elm$core$Platform$Cmd$none);
-				case 'SwitchWeek':
-					var offset = msg.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{appState: $author$project$Main$Loading}),
-						$author$project$Main$changeWeekRequest(offset));
-				case 'StartEdit':
-					var castId = msg.a;
-					var date = msg.b;
-					var maybeReq = msg.c;
-					var maybeConf = msg.d;
-					var initialState = function () {
-						if (maybeConf.$ === 'Just') {
-							var c = maybeConf.a;
-							return {
-								castId: castId,
-								date: date,
-								endTime: c.endTime,
-								exitByEndTime: c.exitByEndTime,
-								note: c.note,
-								roomId: A2(
-									$elm$core$Maybe$withDefault,
-									'',
-									A2($elm$core$Maybe$map, $elm$core$String$fromInt, c.roomId)),
-								startTime: c.startTime,
-								state: c.state
-							};
-						} else {
-							if (maybeReq.$ === 'Just') {
-								var r = maybeReq.a;
-								return {
-									castId: castId,
-									date: date,
-									endTime: A2(
-										$elm$core$Maybe$withDefault,
-										'24:00',
-										A2($elm$core$Maybe$map, $author$project$Main$trimSeconds, r.endTime)),
-									exitByEndTime: r.exitByEndTime,
-									note: '',
-									roomId: '',
-									startTime: A2(
-										$elm$core$Maybe$withDefault,
-										'19:00',
-										A2($elm$core$Maybe$map, $author$project$Main$trimSeconds, r.startTime)),
-									state: 'no_change'
-								};
-							} else {
-								return {castId: castId, date: date, endTime: '24:00', exitByEndTime: false, note: '', roomId: '', startTime: '19:00', state: 'addition'};
-							}
-						}
-					}();
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								editingCell: $elm$core$Maybe$Just(initialState)
-							}),
-						$elm$core$Platform$Cmd$none);
-				case 'UpdateEditStartTime':
-					var v = msg.a;
-					return _Utils_Tuple2(
-						A2(
-							$author$project$Main$updateEditingCell,
-							model,
-							function (c) {
-								return _Utils_update(
-									c,
-									{startTime: v});
-							}),
-						$elm$core$Platform$Cmd$none);
-				case 'UpdateEditEndTime':
-					var v = msg.a;
-					return _Utils_Tuple2(
-						A2(
-							$author$project$Main$updateEditingCell,
-							model,
-							function (c) {
-								return _Utils_update(
-									c,
-									{endTime: v});
-							}),
-						$elm$core$Platform$Cmd$none);
-				case 'UpdateEditExit':
-					var v = msg.a;
-					return _Utils_Tuple2(
-						A2(
-							$author$project$Main$updateEditingCell,
-							model,
-							function (c) {
-								return _Utils_update(
-									c,
-									{exitByEndTime: v});
-							}),
-						$elm$core$Platform$Cmd$none);
-				case 'UpdateEditState':
-					var v = msg.a;
-					return _Utils_Tuple2(
-						A2(
-							$author$project$Main$updateEditingCell,
-							model,
-							function (c) {
-								return _Utils_update(
-									c,
-									{state: v});
-							}),
-						$elm$core$Platform$Cmd$none);
-				case 'UpdateEditNote':
-					var v = msg.a;
-					return _Utils_Tuple2(
-						A2(
-							$author$project$Main$updateEditingCell,
-							model,
-							function (c) {
-								return _Utils_update(
-									c,
-									{note: v});
-							}),
-						$elm$core$Platform$Cmd$none);
-				case 'UpdateEditRoom':
-					var v = msg.a;
-					return _Utils_Tuple2(
-						A2(
-							$author$project$Main$updateEditingCell,
-							model,
-							function (c) {
-								return _Utils_update(
-									c,
-									{roomId: v});
-							}),
-						$elm$core$Platform$Cmd$none);
-				case 'CancelEdit':
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{editingCell: $elm$core$Maybe$Nothing}),
-						$elm$core$Platform$Cmd$none);
-				case 'SaveEdit':
-					var _v4 = _Utils_Tuple2(model.appState, model.editingCell);
-					if ((_v4.a.$ === 'Dashboard') && (_v4.b.$ === 'Just')) {
-						var data = _v4.a.a;
-						var cell = _v4.b.a;
-						var newShift = {
-							castId: cell.castId,
-							date: cell.date,
-							endTime: cell.endTime,
-							exitByEndTime: cell.exitByEndTime,
-							note: cell.note,
-							roomId: $elm$core$String$toInt(cell.roomId),
-							startTime: cell.startTime,
-							state: cell.state
-						};
-						var key = cell.castId + ('_' + cell.date);
-						var newDict = A3($elm$core$Dict$insert, key, newShift, data.confirmedShifts);
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									appState: $author$project$Main$Dashboard(
-										_Utils_update(
-											data,
-											{confirmedShifts: newDict})),
-									editingCell: $elm$core$Maybe$Nothing
-								}),
-							$elm$core$Platform$Cmd$none);
-					} else {
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-					}
-				case 'PublishShifts':
-					var _v5 = model.appState;
-					if (_v5.$ === 'Dashboard') {
-						var data = _v5.a;
-						var json = A2(
-							$author$project$Main$encodePublish,
-							data.weekStartDate,
-							$elm$core$Dict$values(data.confirmedShifts));
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{isSaving: true}),
-							$author$project$Main$publishShiftsRequest(json));
-					} else {
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-					}
-				default:
-					var json = msg.a;
-					var $temp$msg = $author$project$Main$GotData(json),
-						$temp$model = model;
-					msg = $temp$msg;
-					model = $temp$model;
-					continue update;
-			}
-		}
-	});
-var $elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$string(string));
-	});
-var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
-var $elm$html$Html$div = _VirtualDom_node('div');
-var $author$project$Main$formatDateShort = function (s) {
-	var _v0 = A2($elm$core$String$split, '-', s);
-	if (((_v0.b && _v0.b.b) && _v0.b.b.b) && (!_v0.b.b.b.b)) {
-		var _v1 = _v0.b;
-		var m = _v1.a;
-		var _v2 = _v1.b;
-		var d = _v2.a;
-		return A2(
-			$elm$core$Maybe$withDefault,
-			m,
-			A2(
-				$elm$core$Maybe$map,
-				$elm$core$String$fromInt,
-				$elm$core$String$toInt(m))) + ('/' + d);
-	} else {
-		return s;
-	}
-};
-var $elm$core$String$cons = _String_cons;
-var $elm$core$String$fromChar = function (_char) {
-	return A2($elm$core$String$cons, _char, '');
-};
-var $elm$core$Bitwise$and = _Bitwise_and;
-var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
-var $elm$core$String$repeatHelp = F3(
-	function (n, chunk, result) {
-		return (n <= 0) ? result : A3(
-			$elm$core$String$repeatHelp,
-			n >> 1,
-			_Utils_ap(chunk, chunk),
-			(!(n & 1)) ? result : _Utils_ap(result, chunk));
-	});
-var $elm$core$String$repeat = F2(
-	function (n, chunk) {
-		return A3($elm$core$String$repeatHelp, n, chunk, '');
-	});
-var $elm$core$String$padLeft = F3(
-	function (n, _char, string) {
-		return _Utils_ap(
-			A2(
-				$elm$core$String$repeat,
-				n - $elm$core$String$length(string),
-				$elm$core$String$fromChar(_char)),
-			string);
-	});
-var $author$project$Main$addDays = F4(
-	function (y, m, d, offset) {
-		var target = d + offset;
-		var strM = A3(
-			$elm$core$String$padLeft,
-			2,
-			_Utils_chr('0'),
-			$elm$core$String$fromInt(m));
-		var strD = A3(
-			$elm$core$String$padLeft,
-			2,
-			_Utils_chr('0'),
-			$elm$core$String$fromInt(target));
-		return $elm$core$String$fromInt(y) + ('-' + (strM + ('-' + strD)));
-	});
-var $author$project$Main$generateWeekDates = function (start) {
-	var _v0 = A2($elm$core$String$split, '-', start);
-	if (((_v0.b && _v0.b.b) && _v0.b.b.b) && (!_v0.b.b.b.b)) {
-		var yStr = _v0.a;
-		var _v1 = _v0.b;
-		var mStr = _v1.a;
-		var _v2 = _v1.b;
-		var dStr = _v2.a;
-		var _v3 = _Utils_Tuple3(
-			$elm$core$String$toInt(yStr),
-			$elm$core$String$toInt(mStr),
-			$elm$core$String$toInt(dStr));
-		if (((_v3.a.$ === 'Just') && (_v3.b.$ === 'Just')) && (_v3.c.$ === 'Just')) {
-			var y = _v3.a.a;
-			var m = _v3.b.a;
-			var d = _v3.c.a;
-			return A2(
-				$elm$core$List$map,
-				A3($author$project$Main$addDays, y, m, d),
-				A2($elm$core$List$range, 0, 6));
+var $elm$html$Html$h2 = _VirtualDom_node('h2');
+var $elm$html$Html$p = _VirtualDom_node('p');
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
 		} else {
-			return _List_Nil;
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
 		}
-	} else {
-		return _List_Nil;
-	}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
 };
+var $elm$core$List$concatMap = F2(
+	function (f, list) {
+		return $elm$core$List$concat(
+			A2($elm$core$List$map, f, list));
+	});
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$thead = _VirtualDom_node('thead');
 var $elm$html$Html$tr = _VirtualDom_node('tr');
+var $elm$html$Html$Attributes$rowspan = function (n) {
+	return A2(
+		_VirtualDom_attribute,
+		'rowspan',
+		$elm$core$String$fromInt(n));
+};
 var $elm$html$Html$td = _VirtualDom_node('td');
-var $author$project$Main$StartEdit = F4(
-	function (a, b, c, d) {
-		return {$: 'StartEdit', a: a, b: b, c: c, d: d};
-	});
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
 		get:
@@ -6151,528 +5738,286 @@ var $elm$core$Dict$get = F2(
 			}
 		}
 	});
-var $elm$core$List$head = function (list) {
-	if (list.b) {
-		var x = list.a;
-		var xs = list.b;
-		return $elm$core$Maybe$Just(x);
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
-};
-var $elm$virtual_dom$VirtualDom$Normal = function (a) {
-	return {$: 'Normal', a: a};
-};
-var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
-var $elm$html$Html$Events$on = F2(
-	function (event, decoder) {
-		return A2(
-			$elm$virtual_dom$VirtualDom$on,
-			event,
-			$elm$virtual_dom$VirtualDom$Normal(decoder));
-	});
-var $elm$html$Html$Events$onClick = function (msg) {
-	return A2(
-		$elm$html$Html$Events$on,
-		'click',
-		$elm$json$Json$Decode$succeed(msg));
-};
-var $elm$core$Basics$neq = _Utils_notEqual;
-var $elm$html$Html$span = _VirtualDom_node('span');
-var $author$project$Main$viewConfirmedCell = F2(
-	function (rooms, conf) {
-		var timeStr = (conf.state === 'absenteeism') ? '欠勤' : ($author$project$Main$trimSeconds(conf.startTime) + ('-' + $author$project$Main$trimSeconds(conf.endTime)));
-		var roomName = function () {
-			var _v3 = conf.roomId;
-			if (_v3.$ === 'Just') {
-				var rid = _v3.a;
-				return A2(
-					$elm$core$Maybe$withDefault,
-					'',
-					A2(
-						$elm$core$Maybe$map,
-						function ($) {
-							return $.name;
-						},
-						$elm$core$List$head(
-							A2(
-								$elm$core$List$filter,
-								function (r) {
-									return _Utils_eq(r.id, rid);
-								},
-								rooms))));
-			} else {
-				return '';
-			}
-		}();
-		var roomBadgeClass = function () {
-			var _v2 = conf.roomId;
-			if (_v2.$ === 'Just') {
-				var rid = _v2.a;
-				var rType = A2(
-					$elm$core$Maybe$withDefault,
-					1,
-					A2(
-						$elm$core$Maybe$map,
-						function ($) {
-							return $.roomType;
-						},
-						$elm$core$List$head(
-							A2(
-								$elm$core$List$filter,
-								function (r) {
-									return _Utils_eq(r.id, rid);
-								},
-								rooms))));
-				return (rType === 2) ? 'bg-purple-100 text-purple-800 border-purple-200' : 'bg-white/60 text-gray-700 border-gray-200';
-			} else {
-				return '';
-			}
-		}();
-		var _v0 = function () {
-			var _v1 = conf.state;
-			switch (_v1) {
-				case 'absenteeism':
-					return _Utils_Tuple2('bg-red-100', 'text-red-600');
-				case 'addition':
-					return _Utils_Tuple2('bg-green-100', 'text-green-700');
-				case 'time_change':
-					return _Utils_Tuple2('bg-yellow-100', 'text-yellow-700');
-				default:
-					return _Utils_Tuple2('bg-blue-50', 'text-blue-700');
-			}
-		}();
-		var bgColor = _v0.a;
-		var textColor = _v0.b;
-		return A2(
-			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$class('rounded px-1 py-1 font-bold text-[10px] flex flex-col gap-1 ' + (bgColor + (' ' + textColor)))
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$elm$html$Html$div,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text(timeStr)
-						])),
-					(roomName !== '') ? A2(
-					$elm$html$Html$div,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('border rounded px-1 ' + roomBadgeClass)
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text(roomName)
-						])) : $elm$html$Html$text(''),
-					conf.exitByEndTime ? A2(
-					$elm$html$Html$span,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('border border-current rounded px-1 self-center')
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('上')
-						])) : $elm$html$Html$text('')
-				]));
-	});
-var $author$project$Main$viewRequestCell = function (maybeReq) {
-	if (maybeReq.$ === 'Just') {
-		var req = maybeReq.a;
-		return req.isAvailable ? A2(
-			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$class('text-gray-400 border border-dashed border-gray-300 rounded px-1 py-1 text-[10px]')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text(
-					A2(
-						$elm$core$Maybe$withDefault,
-						'',
-						A2($elm$core$Maybe$map, $author$project$Main$trimSeconds, req.startTime)) + ('-' + A2(
-						$elm$core$Maybe$withDefault,
-						'',
-						A2($elm$core$Maybe$map, $author$project$Main$trimSeconds, req.endTime))))
-				])) : A2(
-			$elm$html$Html$span,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$class('text-gray-200')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('✕')
-				]));
-	} else {
-		return A2(
-			$elm$html$Html$span,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$class('text-gray-100')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('-')
-				]));
-	}
-};
-var $author$project$Main$viewCell = F3(
-	function (data, castId, date) {
-		var maybeReq = $elm$core$List$head(
-			A2(
-				$elm$core$List$filter,
-				function (r) {
-					return _Utils_eq(r.userId, castId) && _Utils_eq(r.date, date);
-				},
-				data.requests));
-		var key = castId + ('_' + date);
-		var maybeConf = A2($elm$core$Dict$get, key, data.confirmedShifts);
+var $author$project$Main$viewCellBottom = F2(
+	function (date, cast) {
+		var maybeData = A2($elm$core$Dict$get, date, cast.schedule);
 		return A2(
 			$elm$html$Html$td,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$class('py-2 px-1 text-center border-r border-gray-100 cursor-pointer hover:bg-blue-50 transition'),
-					$elm$html$Html$Events$onClick(
-					A4($author$project$Main$StartEdit, castId, date, maybeReq, maybeConf))
+					$elm$html$Html$Attributes$class('border border-black p-2 text-center h-10')
 				]),
 			_List_fromArray(
 				[
 					function () {
-					if (maybeConf.$ === 'Just') {
-						var conf = maybeConf.a;
-						return A2($author$project$Main$viewConfirmedCell, data.rooms, conf);
+					if (maybeData.$ === 'Just') {
+						var dayData = maybeData.a;
+						var _v1 = dayData.confirmedShift;
+						if (_v1.$ === 'Just') {
+							var shift = _v1.a;
+							return A2(
+								$elm$html$Html$div,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('text-sm')
+									]),
+								_List_fromArray(
+									[
+										$elm$core$String$isEmpty(shift.note) ? $elm$html$Html$text('') : $elm$html$Html$text('📝 ' + shift.note)
+									]));
+						} else {
+							return $elm$html$Html$text('');
+						}
 					} else {
-						return $author$project$Main$viewRequestCell(maybeReq);
+						return $elm$html$Html$text('');
 					}
 				}()
 				]));
 	});
-var $author$project$Main$viewCastRow = F3(
-	function (data, dates, cast) {
+var $elm$html$Html$span = _VirtualDom_node('span');
+var $author$project$Main$viewStateBadge = function (state) {
+	var _v0 = function () {
+		switch (state.$) {
+			case 'NoChange':
+				return _Utils_Tuple2('bg-green-500', '');
+			case 'TimeChange':
+				return _Utils_Tuple2('bg-orange-500', '時間変更');
+			case 'Absenteeism':
+				return _Utils_Tuple2('bg-red-500', '欠勤');
+			case 'Addition':
+				return _Utils_Tuple2('bg-blue-500', '追加');
+			default:
+				return _Utils_Tuple2('bg-gray-400', '?');
+		}
+	}();
+	var colorClass = _v0.a;
+	var label = _v0.b;
+	return $elm$core$String$isEmpty(label) ? $elm$html$Html$text('') : A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('text-white text-xs px-1 py-0.5 rounded inline-block ml-1 ' + colorClass)
+			]),
+		_List_fromArray(
+			[
+				$elm$html$Html$text(label)
+			]));
+};
+var $author$project$Main$viewCellTop = F2(
+	function (date, cast) {
+		var maybeData = A2($elm$core$Dict$get, date, cast.schedule);
 		return A2(
-			$elm$html$Html$tr,
+			$elm$html$Html$td,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$class('border-b border-gray-200 hover:bg-gray-50')
+					$elm$html$Html$Attributes$class('border border-black p-2 text-center bg-gray-50 h-12')
 				]),
+			_List_fromArray(
+				[
+					function () {
+					if (maybeData.$ === 'Just') {
+						var dayData = maybeData.a;
+						var _v1 = dayData.confirmedShift;
+						if (_v1.$ === 'Just') {
+							var shift = _v1.a;
+							return A2(
+								$elm$html$Html$div,
+								_List_Nil,
+								_List_fromArray(
+									[
+										A2(
+										$elm$html$Html$span,
+										_List_fromArray(
+											[
+												$elm$html$Html$Attributes$class('font-bold')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text(shift.startTime + (' - ' + shift.endTime))
+											])),
+										$author$project$Main$viewStateBadge(shift.state)
+									]));
+						} else {
+							var _v2 = dayData.request;
+							switch (_v2.$) {
+								case 'Available':
+									var req = _v2.a;
+									return A2(
+										$elm$html$Html$span,
+										_List_fromArray(
+											[
+												$elm$html$Html$Attributes$class('text-gray-500 text-xs')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text('(希) ' + (req.startTime + ('-' + req.endTime)))
+											]));
+								case 'Holiday':
+									return A2(
+										$elm$html$Html$span,
+										_List_fromArray(
+											[
+												$elm$html$Html$Attributes$class('text-gray-300')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text('×')
+											]));
+								default:
+									return $elm$html$Html$text('-');
+							}
+						}
+					} else {
+						return $elm$html$Html$text('-');
+					}
+				}()
+				]));
+	});
+var $author$project$Main$viewDateRows = F2(
+	function (casts, dateString) {
+		var topRow = A2(
+			$elm$html$Html$tr,
+			_List_Nil,
 			A2(
 				$elm$core$List$cons,
 				A2(
 					$elm$html$Html$td,
 					_List_fromArray(
 						[
-							$elm$html$Html$Attributes$class('py-3 px-2 text-left font-bold sticky left-0 bg-white border-r z-10 whitespace-nowrap text-xs')
+							$elm$html$Html$Attributes$class('border border-black bg-green-50 font-bold text-center align-middle'),
+							$elm$html$Html$Attributes$rowspan(2)
 						]),
 					_List_fromArray(
 						[
-							$elm$html$Html$text(cast.name)
+							$elm$html$Html$text(dateString)
 						])),
 				A2(
 					$elm$core$List$map,
-					A2($author$project$Main$viewCell, data, cast.id),
-					dates)));
+					$author$project$Main$viewCellTop(dateString),
+					casts)));
+		var bottomRow = A2(
+			$elm$html$Html$tr,
+			_List_Nil,
+			A2(
+				$elm$core$List$map,
+				$author$project$Main$viewCellBottom(dateString),
+				casts));
+		return _List_fromArray(
+			[topRow, bottomRow]);
 	});
-var $author$project$Main$viewDashboard = function (data) {
-	var weekDates = $author$project$Main$generateWeekDates(data.weekStartDate);
+var $author$project$Main$viewUserHeader = function (cast) {
 	return A2(
-		$elm$html$Html$div,
+		$elm$html$Html$th,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('p-2 overflow-x-auto')
+				$elm$html$Html$Attributes$class('border border-black bg-gray-300 p-2')
 			]),
 		_List_fromArray(
 			[
+				$elm$html$Html$text(cast.name)
+			]));
+};
+var $author$project$Main$viewScheduleTable = F2(
+	function (dateList, casts) {
+		return A2(
+			$elm$html$Html$table,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('w-full border-collapse shadow-md')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$thead,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$tr,
+							_List_Nil,
+							A2(
+								$elm$core$List$cons,
+								A2(
+									$elm$html$Html$th,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('border border-black bg-gray-300 p-2')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('日付')
+										])),
+								A2($elm$core$List$map, $author$project$Main$viewUserHeader, casts)))
+						])),
+					A2(
+					$elm$html$Html$tbody,
+					_List_Nil,
+					A2(
+						$elm$core$List$concatMap,
+						$author$project$Main$viewDateRows(casts),
+						dateList))
+				]));
+	});
+var $author$project$Main$viewDesktopLayout = function (data) {
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
 				A2(
-				$elm$html$Html$table,
+				$elm$html$Html$h2,
 				_List_fromArray(
 					[
-						$elm$html$Html$Attributes$class('w-full border-collapse bg-white shadow-sm rounded-lg overflow-hidden text-sm')
+						$elm$html$Html$Attributes$class('text-2xl font-bold mb-2')
 					]),
 				_List_fromArray(
 					[
-						A2(
-						$elm$html$Html$thead,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('bg-gray-100 text-gray-600 text-xs')
-							]),
-						_List_fromArray(
-							[
-								A2(
-								$elm$html$Html$tr,
-								_List_Nil,
-								A2(
-									$elm$core$List$cons,
-									A2(
-										$elm$html$Html$th,
-										_List_fromArray(
-											[
-												$elm$html$Html$Attributes$class('py-3 px-2 text-left sticky left-0 bg-gray-100 z-20 border-b whitespace-nowrap')
-											]),
-										_List_fromArray(
-											[
-												$elm$html$Html$text('キャスト')
-											])),
-									A2(
-										$elm$core$List$map,
-										function (d) {
-											return A2(
-												$elm$html$Html$th,
-												_List_fromArray(
-													[
-														$elm$html$Html$Attributes$class('py-3 px-1 text-center border-b min-w-[70px]')
-													]),
-												_List_fromArray(
-													[
-														$elm$html$Html$text(
-														$author$project$Main$formatDateShort(d))
-													]));
-										},
-										weekDates)))
-							])),
-						A2(
-						$elm$html$Html$tbody,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('text-gray-600')
-							]),
-						A2(
-							$elm$core$List$map,
-							A2($author$project$Main$viewCastRow, data, weekDates),
-							data.casts))
-					]))
+						$elm$html$Html$text('シフト管理（PCモード）')
+					])),
+				A2(
+				$elm$html$Html$p,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('mb-4 text-gray-600')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('※ 広い画面向けの編集テーブルを表示します。')
+					])),
+				A2(
+				$author$project$Main$viewScheduleTable,
+				$author$project$Main$getSampleDateList(data),
+				data.users)
 			]));
 };
-var $author$project$Main$viewError = function (maybeErr) {
-	if (maybeErr.$ === 'Nothing') {
-		return $elm$html$Html$text('');
-	} else {
-		var err = maybeErr.a;
+var $author$project$Main$viewError = function (maybeError) {
+	if (maybeError.$ === 'Just') {
+		var err = maybeError.a;
 		return A2(
 			$elm$html$Html$div,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$class('fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-xl z-50 text-xs')
+					$elm$html$Html$Attributes$class('bg-red-50 text-red-800 p-3 mb-5 border border-red-200 rounded')
 				]),
 			_List_fromArray(
 				[
-					$elm$html$Html$text(err)
+					$elm$html$Html$text('エラーが発生しました: ' + err)
 				]));
+	} else {
+		return $elm$html$Html$text('');
 	}
 };
-var $author$project$Main$PublishShifts = {$: 'PublishShifts'};
-var $elm$html$Html$button = _VirtualDom_node('button');
-var $elm$html$Html$Attributes$boolProperty = F2(
-	function (key, bool) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$bool(bool));
-	});
-var $elm$html$Html$Attributes$disabled = $elm$html$Html$Attributes$boolProperty('disabled');
-var $elm$html$Html$h1 = _VirtualDom_node('h1');
-var $elm$html$Html$header = _VirtualDom_node('header');
-var $author$project$Main$viewHeader = function (model) {
-	return A2(
-		$elm$html$Html$header,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$class('bg-gray-900 text-white px-4 py-4 flex justify-between items-center shadow-md sticky top-0 z-30')
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$h1,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$class('font-bold text-lg')
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text('シフト管理')
-							])),
-						function () {
-						var _v0 = model.appState;
-						if (_v0.$ === 'Dashboard') {
-							var d = _v0.a;
-							return d.isPublished ? A2(
-								$elm$html$Html$span,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$class('text-[10px] text-green-400 font-bold flex items-center gap-1')
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('● 公開済')
-									])) : A2(
-								$elm$html$Html$span,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$class('text-[10px] text-yellow-400 font-bold flex items-center gap-1')
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('● 未公開')
-									]));
-						} else {
-							return $elm$html$Html$text('');
-						}
-					}()
-					])),
-				function () {
-				var _v1 = model.appState;
-				if (_v1.$ === 'Dashboard') {
-					return A2(
-						$elm$html$Html$button,
-						_List_fromArray(
-							[
-								$elm$html$Html$Events$onClick($author$project$Main$PublishShifts),
-								$elm$html$Html$Attributes$disabled(model.isSaving),
-								$elm$html$Html$Attributes$class('bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold disabled:opacity-50 shadow-sm text-xs transition')
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text(
-								model.isSaving ? '保存中...' : '保存・公開')
-							]));
-				} else {
-					return $elm$html$Html$text('');
-				}
-			}()
-			]));
-};
-var $author$project$Main$CancelEdit = {$: 'CancelEdit'};
-var $author$project$Main$SaveEdit = {$: 'SaveEdit'};
-var $author$project$Main$UpdateEditEndTime = function (a) {
-	return {$: 'UpdateEditEndTime', a: a};
-};
-var $author$project$Main$UpdateEditExit = function (a) {
-	return {$: 'UpdateEditExit', a: a};
-};
-var $author$project$Main$UpdateEditNote = function (a) {
-	return {$: 'UpdateEditNote', a: a};
-};
-var $author$project$Main$UpdateEditRoom = function (a) {
-	return {$: 'UpdateEditRoom', a: a};
-};
-var $author$project$Main$UpdateEditStartTime = function (a) {
-	return {$: 'UpdateEditStartTime', a: a};
-};
-var $author$project$Main$UpdateEditState = function (a) {
-	return {$: 'UpdateEditState', a: a};
-};
-var $elm$html$Html$Attributes$checked = $elm$html$Html$Attributes$boolProperty('checked');
 var $elm$html$Html$h3 = _VirtualDom_node('h3');
-var $elm$html$Html$input = _VirtualDom_node('input');
-var $elm$html$Html$label = _VirtualDom_node('label');
-var $elm$core$Basics$not = _Basics_not;
-var $elm$html$Html$Events$alwaysStop = function (x) {
-	return _Utils_Tuple2(x, true);
-};
-var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
-	return {$: 'MayStopPropagation', a: a};
-};
-var $elm$html$Html$Events$stopPropagationOn = F2(
-	function (event, decoder) {
-		return A2(
-			$elm$virtual_dom$VirtualDom$on,
-			event,
-			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
-	});
-var $elm$html$Html$Events$targetValue = A2(
-	$elm$json$Json$Decode$at,
-	_List_fromArray(
-		['target', 'value']),
-	$elm$json$Json$Decode$string);
-var $elm$html$Html$Events$onInput = function (tagger) {
-	return A2(
-		$elm$html$Html$Events$stopPropagationOn,
-		'input',
-		A2(
-			$elm$json$Json$Decode$map,
-			$elm$html$Html$Events$alwaysStop,
-			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
-};
-var $elm$html$Html$option = _VirtualDom_node('option');
-var $elm$html$Html$select = _VirtualDom_node('select');
-var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
-var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
-var $elm$virtual_dom$VirtualDom$attribute = F2(
-	function (key, value) {
-		return A2(
-			_VirtualDom_attribute,
-			_VirtualDom_noOnOrFormAction(key),
-			_VirtualDom_noJavaScriptOrHtmlUri(value));
-	});
-var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
-var $elm$html$Html$optgroup = _VirtualDom_node('optgroup');
-var $author$project$Main$viewRoomOption = function (room) {
-	return A2(
-		$elm$html$Html$option,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$value(
-				$elm$core$String$fromInt(room.id))
-			]),
-		_List_fromArray(
-			[
-				$elm$html$Html$text(room.name)
-			]));
-};
-var $author$project$Main$viewRoomOptions = function (rooms) {
-	var type2 = A2(
-		$elm$core$List$filter,
-		function (r) {
-			return r.roomType === 2;
-		},
-		rooms);
-	var type1 = A2(
-		$elm$core$List$filter,
-		function (r) {
-			return r.roomType === 1;
-		},
-		rooms);
-	return _List_fromArray(
-		[
-			A2(
-			$elm$html$Html$optgroup,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$attribute, 'label', '通常ルーム')
-				]),
-			A2($elm$core$List$map, $author$project$Main$viewRoomOption, type1)),
-			A2(
-			$elm$html$Html$optgroup,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$attribute, 'label', 'VIP/特別ルーム')
-				]),
-			A2($elm$core$List$map, $author$project$Main$viewRoomOption, type2))
-		]);
-};
-var $author$project$Main$viewModal = F2(
-	function (rooms, maybeCell) {
-		if (maybeCell.$ === 'Nothing') {
-			return $elm$html$Html$text('');
-		} else {
-			var cell = maybeCell.a;
+var $author$project$Main$viewMobileDateRow = F2(
+	function (cast, date) {
+		var maybeData = A2($elm$core$Dict$get, date, cast.schedule);
+		if (maybeData.$ === 'Just') {
+			var dayData = maybeData.a;
 			return A2(
 				$elm$html$Html$div,
 				_List_fromArray(
 					[
-						$elm$html$Html$Attributes$class('fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in')
+						$elm$html$Html$Attributes$class('flex justify-between py-2 border-b border-gray-100 last:border-0')
 					]),
 				_List_fromArray(
 					[
@@ -6680,337 +6025,140 @@ var $author$project$Main$viewModal = F2(
 						$elm$html$Html$div,
 						_List_fromArray(
 							[
-								$elm$html$Html$Attributes$class('bg-white p-5 rounded-2xl shadow-2xl w-full max-w-xs mx-4')
+								$elm$html$Html$Attributes$class('font-bold w-[30%]')
 							]),
 						_List_fromArray(
 							[
-								A2(
-								$elm$html$Html$div,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$class('flex justify-between items-center mb-4')
-									]),
-								_List_fromArray(
-									[
-										A2(
-										$elm$html$Html$h3,
-										_List_fromArray(
-											[
-												$elm$html$Html$Attributes$class('font-bold text-lg')
-											]),
-										_List_fromArray(
-											[
-												$elm$html$Html$text(
-												$author$project$Main$formatDateShort(cell.date))
-											])),
-										A2(
-										$elm$html$Html$button,
-										_List_fromArray(
-											[
-												$elm$html$Html$Events$onClick($author$project$Main$CancelEdit),
-												$elm$html$Html$Attributes$class('text-gray-400 p-2 hover:text-gray-600')
-											]),
-										_List_fromArray(
-											[
-												$elm$html$Html$text('✕')
-											]))
-									])),
-								A2(
-								$elm$html$Html$div,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$class('space-y-4')
-									]),
-								_List_fromArray(
-									[
-										A2(
+								$elm$html$Html$text(date)
+							])),
+						A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('flex-1')
+							]),
+						_List_fromArray(
+							[
+								function () {
+								var _v1 = dayData.confirmedShift;
+								if (_v1.$ === 'Just') {
+									var shift = _v1.a;
+									return A2(
 										$elm$html$Html$div,
 										_List_Nil,
 										_List_fromArray(
 											[
 												A2(
-												$elm$html$Html$label,
+												$elm$html$Html$span,
+												_List_Nil,
 												_List_fromArray(
 													[
-														$elm$html$Html$Attributes$class('block text-xs font-bold text-gray-500 uppercase mb-1')
-													]),
-												_List_fromArray(
-													[
-														$elm$html$Html$text('ステータス')
+														$elm$html$Html$text(shift.startTime + (' - ' + shift.endTime))
 													])),
-												A2(
-												$elm$html$Html$select,
+												$author$project$Main$viewStateBadge(shift.state)
+											]));
+								} else {
+									var _v2 = dayData.request;
+									switch (_v2.$) {
+										case 'Holiday':
+											return A2(
+												$elm$html$Html$span,
 												_List_fromArray(
 													[
-														$elm$html$Html$Attributes$value(cell.state),
-														$elm$html$Html$Events$onInput($author$project$Main$UpdateEditState),
-														$elm$html$Html$Attributes$class('w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm')
+														$elm$html$Html$Attributes$class('text-gray-300')
 													]),
 												_List_fromArray(
 													[
-														A2(
-														$elm$html$Html$option,
-														_List_fromArray(
-															[
-																$elm$html$Html$Attributes$value('no_change')
-															]),
-														_List_fromArray(
-															[
-																$elm$html$Html$text('通常出勤')
-															])),
-														A2(
-														$elm$html$Html$option,
-														_List_fromArray(
-															[
-																$elm$html$Html$Attributes$value('time_change')
-															]),
-														_List_fromArray(
-															[
-																$elm$html$Html$text('時間変更')
-															])),
-														A2(
-														$elm$html$Html$option,
-														_List_fromArray(
-															[
-																$elm$html$Html$Attributes$value('addition')
-															]),
-														_List_fromArray(
-															[
-																$elm$html$Html$text('追加出勤')
-															])),
-														A2(
-														$elm$html$Html$option,
-														_List_fromArray(
-															[
-																$elm$html$Html$Attributes$value('absenteeism')
-															]),
-														_List_fromArray(
-															[
-																$elm$html$Html$text('欠勤')
-															]))
-													]))
-											])),
-										(cell.state !== 'absenteeism') ? A2(
-										$elm$html$Html$div,
-										_List_Nil,
-										_List_fromArray(
-											[
-												A2(
-												$elm$html$Html$label,
+														$elm$html$Html$text('休み')
+													]));
+										case 'Available':
+											return A2(
+												$elm$html$Html$span,
 												_List_fromArray(
 													[
-														$elm$html$Html$Attributes$class('block text-xs font-bold text-gray-500 uppercase mb-1')
+														$elm$html$Html$Attributes$class('text-orange-400')
 													]),
 												_List_fromArray(
 													[
-														$elm$html$Html$text('勤務時間')
-													])),
-												A2(
-												$elm$html$Html$div,
-												_List_fromArray(
-													[
-														$elm$html$Html$Attributes$class('flex items-center gap-2')
-													]),
-												_List_fromArray(
-													[
-														A2(
-														$elm$html$Html$input,
-														_List_fromArray(
-															[
-																$elm$html$Html$Attributes$type_('time'),
-																$elm$html$Html$Attributes$value(cell.startTime),
-																$elm$html$Html$Events$onInput($author$project$Main$UpdateEditStartTime),
-																$elm$html$Html$Attributes$class('flex-1 bg-gray-50 border border-gray-200 rounded-lg p-2 text-center font-bold')
-															]),
-														_List_Nil),
-														A2(
-														$elm$html$Html$span,
-														_List_Nil,
-														_List_fromArray(
-															[
-																$elm$html$Html$text('～')
-															])),
-														A2(
-														$elm$html$Html$input,
-														_List_fromArray(
-															[
-																$elm$html$Html$Attributes$type_('time'),
-																$elm$html$Html$Attributes$value(cell.endTime),
-																$elm$html$Html$Events$onInput($author$project$Main$UpdateEditEndTime),
-																$elm$html$Html$Attributes$class('flex-1 bg-gray-50 border border-gray-200 rounded-lg p-2 text-center font-bold')
-															]),
-														_List_Nil)
-													])),
-												A2(
-												$elm$html$Html$label,
-												_List_fromArray(
-													[
-														$elm$html$Html$Attributes$class('flex items-center gap-2 mt-3 cursor-pointer')
-													]),
-												_List_fromArray(
-													[
-														A2(
-														$elm$html$Html$input,
-														_List_fromArray(
-															[
-																$elm$html$Html$Attributes$type_('checkbox'),
-																$elm$html$Html$Attributes$checked(cell.exitByEndTime),
-																$elm$html$Html$Events$onClick(
-																$author$project$Main$UpdateEditExit(!cell.exitByEndTime)),
-																$elm$html$Html$Attributes$class('w-5 h-5')
-															]),
-														_List_Nil),
-														A2(
-														$elm$html$Html$span,
-														_List_fromArray(
-															[
-																$elm$html$Html$Attributes$class('text-sm')
-															]),
-														_List_fromArray(
-															[
-																$elm$html$Html$text('ラスト上がり')
-															]))
-													]))
-											])) : $elm$html$Html$text(''),
-										(cell.state !== 'absenteeism') ? A2(
-										$elm$html$Html$div,
-										_List_Nil,
-										_List_fromArray(
-											[
-												A2(
-												$elm$html$Html$label,
-												_List_fromArray(
-													[
-														$elm$html$Html$Attributes$class('block text-xs font-bold text-gray-500 uppercase mb-1')
-													]),
-												_List_fromArray(
-													[
-														$elm$html$Html$text('配置 (部屋)')
-													])),
-												A2(
-												$elm$html$Html$select,
-												_List_fromArray(
-													[
-														$elm$html$Html$Attributes$value(cell.roomId),
-														$elm$html$Html$Events$onInput($author$project$Main$UpdateEditRoom),
-														$elm$html$Html$Attributes$class('w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm')
-													]),
-												_Utils_ap(
-													_List_fromArray(
-														[
-															A2(
-															$elm$html$Html$option,
-															_List_fromArray(
-																[
-																	$elm$html$Html$Attributes$value('')
-																]),
-															_List_fromArray(
-																[
-																	$elm$html$Html$text('未割り当て')
-																]))
-														]),
-													$author$project$Main$viewRoomOptions(rooms)))
-											])) : $elm$html$Html$text(''),
-										A2(
-										$elm$html$Html$div,
-										_List_Nil,
-										_List_fromArray(
-											[
-												A2(
-												$elm$html$Html$label,
-												_List_fromArray(
-													[
-														$elm$html$Html$Attributes$class('block text-xs font-bold text-gray-500 uppercase mb-1')
-													]),
-												_List_fromArray(
-													[
-														$elm$html$Html$text('備考')
-													])),
-												A2(
-												$elm$html$Html$input,
-												_List_fromArray(
-													[
-														$elm$html$Html$Attributes$type_('text'),
-														$elm$html$Html$Attributes$value(cell.note),
-														$elm$html$Html$Events$onInput($author$project$Main$UpdateEditNote),
-														$elm$html$Html$Attributes$class('w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm')
-													]),
-												_List_Nil)
-											]))
-									])),
-								A2(
-								$elm$html$Html$div,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$class('mt-6 flex gap-3')
-									]),
-								_List_fromArray(
-									[
-										A2(
-										$elm$html$Html$button,
-										_List_fromArray(
-											[
-												$elm$html$Html$Events$onClick($author$project$Main$CancelEdit),
-												$elm$html$Html$Attributes$class('flex-1 py-3 text-gray-600 bg-gray-100 rounded-xl font-bold text-sm')
-											]),
-										_List_fromArray(
-											[
-												$elm$html$Html$text('キャンセル')
-											])),
-										A2(
-										$elm$html$Html$button,
-										_List_fromArray(
-											[
-												$elm$html$Html$Events$onClick($author$project$Main$SaveEdit),
-												$elm$html$Html$Attributes$class('flex-1 py-3 bg-gray-900 text-white rounded-xl font-bold shadow-lg text-sm')
-											]),
-										_List_fromArray(
-											[
-												$elm$html$Html$text('確定')
-											]))
-									]))
+														$elm$html$Html$text('未確定')
+													]));
+										default:
+											return $elm$html$Html$text('-');
+									}
+								}
+							}()
 							]))
 					]));
+		} else {
+			return $elm$html$Html$text('');
 		}
 	});
-var $author$project$Main$SwitchWeek = function (a) {
-	return {$: 'SwitchWeek', a: a};
-};
-var $author$project$Main$viewWeekSwitcher = function (currentOffset) {
+var $author$project$Main$viewMobileUserCard = F2(
+	function (dateList, cast) {
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('border border-gray-200 rounded-lg bg-white p-4 shadow-sm')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$h3,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('mt-0 border-b-2 border-gray-100 pb-2 font-bold text-lg')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(cast.name)
+						])),
+					A2(
+					$elm$html$Html$div,
+					_List_Nil,
+					A2(
+						$elm$core$List$map,
+						$author$project$Main$viewMobileDateRow(cast),
+						dateList))
+				]));
+	});
+var $author$project$Main$viewMobileLayout = function (data) {
 	return A2(
 		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$class('flex p-2 gap-2 justify-center bg-white border-b border-gray-200')
-			]),
+		_List_Nil,
 		_List_fromArray(
 			[
 				A2(
-				$elm$html$Html$button,
+				$elm$html$Html$h2,
 				_List_fromArray(
 					[
-						$elm$html$Html$Events$onClick(
-						$author$project$Main$SwitchWeek(0)),
-						$elm$html$Html$Attributes$class(
-						'flex-1 py-2 rounded-lg text-sm font-bold transition ' + ((!currentOffset) ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'))
+						$elm$html$Html$Attributes$class('text-xl font-bold mb-2')
 					]),
 				_List_fromArray(
 					[
-						$elm$html$Html$text('今週')
+						$elm$html$Html$text('シフト確認（モバイル）')
 					])),
 				A2(
-				$elm$html$Html$button,
+				$elm$html$Html$p,
 				_List_fromArray(
 					[
-						$elm$html$Html$Events$onClick(
-						$author$project$Main$SwitchWeek(1)),
-						$elm$html$Html$Attributes$class(
-						'flex-1 py-2 rounded-lg text-sm font-bold transition ' + ((currentOffset === 1) ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'))
+						$elm$html$Html$Attributes$class('text-sm text-gray-600 mb-4')
 					]),
 				_List_fromArray(
 					[
-						$elm$html$Html$text('来週')
-					]))
+						$elm$html$Html$text('※ ユーザーごとのリスト表示です。')
+					])),
+				A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('flex flex-col gap-4')
+					]),
+				A2(
+					$elm$core$List$map,
+					$author$project$Main$viewMobileUserCard(
+						$author$project$Main$getSampleDateList(data)),
+					data.users))
 			]));
 };
 var $author$project$Main$view = function (model) {
@@ -7018,54 +6166,32 @@ var $author$project$Main$view = function (model) {
 		$elm$html$Html$div,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('min-h-screen pb-20 bg-gray-50 font-sans text-gray-900')
+				$elm$html$Html$Attributes$class('font-sans p-5')
 			]),
 		_List_fromArray(
 			[
-				$author$project$Main$viewHeader(model),
+				$author$project$Main$viewError(model.error),
 				function () {
-				var _v0 = model.appState;
+				var _v0 = model.status;
 				if (_v0.$ === 'Loading') {
 					return A2(
 						$elm$html$Html$div,
 						_List_fromArray(
 							[
-								$elm$html$Html$Attributes$class('flex justify-center items-center h-64')
+								$elm$html$Html$Attributes$class('loading text-gray-500')
 							]),
 						_List_fromArray(
 							[
-								A2(
-								$elm$html$Html$div,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$class('animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600')
-									]),
-								_List_Nil)
+								$elm$html$Html$text('データを読み込んでいます...')
 							]));
 				} else {
 					var data = _v0.a;
-					return A2(
-						$elm$html$Html$div,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$author$project$Main$viewWeekSwitcher(data.weekOffset),
-								$author$project$Main$viewDashboard(data),
-								A2($author$project$Main$viewModal, data.rooms, model.editingCell)
-							]));
+					return data.isInLineApp ? $author$project$Main$viewMobileLayout(data) : $author$project$Main$viewDesktopLayout(data);
 				}
-			}(),
-				$author$project$Main$viewError(model.error)
+			}()
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
-	{
-		init: function (_v0) {
-			return $author$project$Main$init(_Utils_Tuple0);
-		},
-		subscriptions: $author$project$Main$subscriptions,
-		update: $author$project$Main$update,
-		view: $author$project$Main$view
-	});
+	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
 _Platform_export({'Main':{'init':$author$project$Main$main(
 	$elm$json$Json$Decode$succeed(_Utils_Tuple0))(0)}});}(this));
