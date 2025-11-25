@@ -5791,8 +5791,6 @@ var $elm$html$Html$Attributes$rowspan = function (n) {
 		'rowspan',
 		$elm$core$String$fromInt(n));
 };
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $elm$html$Html$td = _VirtualDom_node('td');
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
@@ -5971,9 +5969,8 @@ var $author$project$Main$viewDateRows = F2(
 					$elm$html$Html$td,
 					_List_fromArray(
 						[
-							$elm$html$Html$Attributes$class('border border-black bg-green-50 font-bold text-center align-middle'),
-							$elm$html$Html$Attributes$rowspan(2),
-							A2($elm$html$Html$Attributes$style, 'white-space', 'pre-line')
+							$elm$html$Html$Attributes$class('border border-black bg-green-50 font-bold text-center align-middle whitespace-pre-line'),
+							$elm$html$Html$Attributes$rowspan(2)
 						]),
 					_List_fromArray(
 						[
@@ -6029,9 +6026,7 @@ var $author$project$Main$viewUserHeader = function (cast) {
 		$elm$html$Html$th,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('border border-black bg-gray-300 p-2'),
-				A2($elm$html$Html$Attributes$style, 'writing-mode', 'vertical-rl'),
-				A2($elm$html$Html$Attributes$style, 'text-orientation', 'upright')
+				$elm$html$Html$Attributes$class('border border-black bg-gray-300 p-2 [writing-mode:vertical-rl] [text-orientation:upright]')
 			]),
 		_List_fromArray(
 			[
