@@ -5872,12 +5872,19 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{currentTime: now}),
-					$elm$core$Platform$Cmd$batch(
-						_List_fromArray(
-							[
-								$author$project$Main$scheduleNextJstMidnight(now),
-								$author$project$Main$refreshDataRequest(_Utils_Tuple0)
-							])));
+					function () {
+						var _v2 = model.status;
+						if (_v2.$ === 'Loading') {
+							return $author$project$Main$scheduleNextJstMidnight(now);
+						} else {
+							return $elm$core$Platform$Cmd$batch(
+								_List_fromArray(
+									[
+										$author$project$Main$scheduleNextJstMidnight(now),
+										$author$project$Main$refreshDataRequest(_Utils_Tuple0)
+									]));
+						}
+					}());
 			case 'DataRefreshed':
 				var result = msg.a;
 				if (result.$ === 'Ok') {
