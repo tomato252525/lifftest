@@ -7,6 +7,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
     let db = null;
     let currentUserId = null;
+    let isInClient = false;
 
     // 日付計算
     const getMondayDate = (offsetWeeks) => {
@@ -143,6 +144,23 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
             app.ports.deliverError?.send(typeof e === 'string' ? e : e?.message || 'Unknown error');
         };
 
+        app.ports.refreshDataRequest?.subscribe(async () => {
+            if (!db || !currentUserId || !isInClient) {
+                sendError('DB client or user ID is not available');
+                return;
+            }
+
+            try {
+                const result = await loadInitialScheduleData();
+                app.ports.refreshDataResponse?.send({
+                    ...result,
+                    isInClient
+                });
+            } catch (e) {
+                sendError(e);
+            }
+        });
+
         // 認証・初期化処理
         liff.init({
             liffId,
@@ -187,6 +205,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
                 if (result.user.role !== 'admin') { sendError('管理者権限がありません。'); return; }
 
                 currentUserId = result.user.id;
+                isInClient = liff.isInClient();
                 db = createClient(supabaseUrl, supabaseAnonKey, {
                     auth: { persistSession: false },
                     global: { headers: { Authorization: `Bearer ${result.token}` } },
@@ -195,7 +214,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
                 const resultData = await loadInitialScheduleData();
                 app.ports.deliverVerificationResult.send({
                     ...resultData,
-                    isInClient: liff.isInClient()
+                    isInClient
                 });
             } catch (e) {
                 sendError(e);
