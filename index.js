@@ -145,7 +145,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
         };
 
         app.ports.refreshDataRequest?.subscribe(async () => {
-            if (!db || !currentUserId || !isInClient) {
+            if (!db || !currentUserId) {
                 sendError('DB client or user ID is not available');
                 return;
             }
