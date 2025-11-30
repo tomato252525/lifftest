@@ -6218,27 +6218,197 @@ var $author$project$Main$getWeekDateList = F2(
 			A2($elm$core$List$range, 0, 6));
 	});
 var $elm$html$Html$h2 = _VirtualDom_node('h2');
-var $elm$core$List$append = F2(
-	function (xs, ys) {
-		if (!ys.b) {
-			return xs;
-		} else {
-			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
-		}
-	});
-var $elm$core$List$concat = function (lists) {
-	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
-};
-var $elm$core$List$concatMap = F2(
-	function (f, list) {
-		return $elm$core$List$concat(
-			A2($elm$core$List$map, f, list));
-	});
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
+var $elm$html$Html$td = _VirtualDom_node('td');
+var $elm$html$Html$tr = _VirtualDom_node('tr');
+var $author$project$Main$viewNoteCell = function (cast) {
+	return A2(
+		$elm$html$Html$td,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('border border-black p-1 text-xs text-center break-words max-w-[100px]')
+			]),
+		_List_fromArray(
+			[
+				$elm$core$String$isEmpty(cast.note) ? $elm$html$Html$text('') : $elm$html$Html$text(cast.note)
+			]));
+};
+var $elm$html$Html$br = _VirtualDom_node('br');
+var $elm$core$Dict$get = F2(
+	function (targetKey, dict) {
+		get:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
+				switch (_v1.$) {
+					case 'LT':
+						var $temp$targetKey = targetKey,
+							$temp$dict = left;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+					case 'EQ':
+						return $elm$core$Maybe$Just(value);
+					default:
+						var $temp$targetKey = targetKey,
+							$temp$dict = right;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+				}
+			}
+		}
+	});
+var $elm$core$Basics$not = _Basics_not;
+var $author$project$Main$viewStateBadge = function (state) {
+	var _v0 = function () {
+		switch (state.$) {
+			case 'NoChange':
+				return _Utils_Tuple2('bg-green-500', '');
+			case 'TimeChange':
+				return _Utils_Tuple2('bg-orange-500', '時間変更');
+			case 'Absenteeism':
+				return _Utils_Tuple2('bg-red-500', '欠勤');
+			case 'Addition':
+				return _Utils_Tuple2('bg-blue-500', '追加');
+			default:
+				return _Utils_Tuple2('bg-gray-400', '?');
+		}
+	}();
+	var colorClass = _v0.a;
+	var label = _v0.b;
+	return $elm$core$String$isEmpty(label) ? $elm$html$Html$text('') : A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('text-white text-xs px-1 py-0.5 rounded inline-block ml-1 ' + colorClass)
+			]),
+		_List_fromArray(
+			[
+				$elm$html$Html$text(label)
+			]));
+};
+var $author$project$Main$viewShiftCell = F2(
+	function (cast, date) {
+		var maybeData = A2($elm$core$Dict$get, date, cast.schedule);
+		return A2(
+			$elm$html$Html$td,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('border border-black p-1 text-center h-16 align-middle relative hover:bg-gray-50 transition-colors')
+				]),
+			_List_fromArray(
+				[
+					function () {
+					if (maybeData.$ === 'Just') {
+						var dayData = maybeData.a;
+						var _v1 = dayData.confirmedShift;
+						if (_v1.$ === 'Just') {
+							var shift = _v1.a;
+							return A2(
+								$elm$html$Html$div,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('flex flex-col items-center justify-center w-full h-full')
+									]),
+								_List_fromArray(
+									[
+										A2(
+										$elm$html$Html$div,
+										_List_fromArray(
+											[
+												$elm$html$Html$Attributes$class('font-bold text-base')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text(shift.startTime + ('-' + shift.endTime))
+											])),
+										$author$project$Main$viewStateBadge(shift.state),
+										(!$elm$core$String$isEmpty(shift.note)) ? A2(
+										$elm$html$Html$div,
+										_List_fromArray(
+											[
+												$elm$html$Html$Attributes$class('text-[10px] text-gray-500 leading-tight mt-1')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text(shift.note)
+											])) : $elm$html$Html$text('')
+									]));
+						} else {
+							var _v2 = dayData.request;
+							switch (_v2.$) {
+								case 'Available':
+									var req = _v2.a;
+									return A2(
+										$elm$html$Html$div,
+										_List_fromArray(
+											[
+												$elm$html$Html$Attributes$class('text-xs text-orange-400 italic')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text(req.startTime + ('-' + req.endTime)),
+												A2($elm$html$Html$br, _List_Nil, _List_Nil),
+												$elm$html$Html$text('(未)')
+											]));
+								case 'Holiday':
+									return A2(
+										$elm$html$Html$div,
+										_List_fromArray(
+											[
+												$elm$html$Html$Attributes$class('text-gray-300 font-bold text-xl')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text('×')
+											]));
+								default:
+									return $elm$html$Html$text('');
+							}
+						}
+					} else {
+						return $elm$html$Html$text('');
+					}
+				}()
+				]));
+	});
+var $author$project$Main$viewCastRow = F2(
+	function (dateList, cast) {
+		return A2(
+			$elm$html$Html$tr,
+			_List_Nil,
+			A2(
+				$elm$core$List$cons,
+				A2(
+					$elm$html$Html$td,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$class('border border-black p-2 font-bold text-center bg-gray-50')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(cast.name)
+						])),
+				_Utils_ap(
+					A2(
+						$elm$core$List$map,
+						$author$project$Main$viewShiftCell(cast),
+						dateList),
+					_List_fromArray(
+						[
+							$author$project$Main$viewNoteCell(cast)
+						]))));
+	});
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$thead = _VirtualDom_node('thead');
-var $elm$html$Html$tr = _VirtualDom_node('tr');
 var $author$project$Main$formatDateShort = function (dateStr) {
 	var _v0 = A2($elm$core$String$split, '-', dateStr);
 	if (((_v0.b && _v0.b.b) && _v0.b.b.b) && (!_v0.b.b.b.b)) {
@@ -6325,301 +6495,117 @@ var $author$project$Main$getDayOfWeek = function (dateStr) {
 		return '';
 	}
 };
-var $elm$html$Html$Attributes$rowspan = function (n) {
-	return A2(
-		_VirtualDom_attribute,
-		'rowspan',
-		$elm$core$String$fromInt(n));
-};
-var $elm$html$Html$td = _VirtualDom_node('td');
-var $elm$core$Dict$get = F2(
-	function (targetKey, dict) {
-		get:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
-				switch (_v1.$) {
-					case 'LT':
-						var $temp$targetKey = targetKey,
-							$temp$dict = left;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-					case 'EQ':
-						return $elm$core$Maybe$Just(value);
-					default:
-						var $temp$targetKey = targetKey,
-							$temp$dict = right;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-				}
-			}
-		}
-	});
-var $author$project$Main$viewCellBottom = F2(
-	function (date, cast) {
-		var maybeData = A2($elm$core$Dict$get, date, cast.schedule);
-		return A2(
-			$elm$html$Html$td,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$class('border border-black p-2 text-center h-10')
-				]),
-			_List_fromArray(
-				[
-					function () {
-					if (maybeData.$ === 'Just') {
-						var dayData = maybeData.a;
-						var _v1 = dayData.confirmedShift;
-						if (_v1.$ === 'Just') {
-							var shift = _v1.a;
-							return A2(
-								$elm$html$Html$div,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$class('text-sm')
-									]),
-								_List_fromArray(
-									[
-										$elm$core$String$isEmpty(shift.note) ? $elm$html$Html$text('') : $elm$html$Html$text('📝 ' + shift.note)
-									]));
-						} else {
-							return $elm$html$Html$text('');
-						}
-					} else {
-						return $elm$html$Html$text('');
-					}
-				}()
-				]));
-	});
-var $elm$html$Html$span = _VirtualDom_node('span');
-var $author$project$Main$viewStateBadge = function (state) {
-	var _v0 = function () {
-		switch (state.$) {
-			case 'NoChange':
-				return _Utils_Tuple2('bg-green-500', '');
-			case 'TimeChange':
-				return _Utils_Tuple2('bg-orange-500', '時間変更');
-			case 'Absenteeism':
-				return _Utils_Tuple2('bg-red-500', '欠勤');
-			case 'Addition':
-				return _Utils_Tuple2('bg-blue-500', '追加');
+var $author$project$Main$viewDateHeaderCell = function (dateStr) {
+	var dayOfWeek = $author$project$Main$getDayOfWeek(dateStr);
+	var colorClass = function () {
+		switch (dayOfWeek) {
+			case '土':
+				return 'text-blue-600 bg-blue-50';
+			case '日':
+				return 'text-red-600 bg-red-50';
 			default:
-				return _Utils_Tuple2('bg-gray-400', '?');
+				return '';
 		}
 	}();
-	var colorClass = _v0.a;
-	var label = _v0.b;
-	return $elm$core$String$isEmpty(label) ? $elm$html$Html$text('') : A2(
-		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$class('text-white text-xs px-1 py-0.5 rounded inline-block ml-1 ' + colorClass)
-			]),
-		_List_fromArray(
-			[
-				$elm$html$Html$text(label)
-			]));
-};
-var $author$project$Main$viewCellTop = F2(
-	function (date, cast) {
-		var maybeData = A2($elm$core$Dict$get, date, cast.schedule);
-		return A2(
-			$elm$html$Html$td,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$class('border border-black p-2 text-center bg-gray-50 h-12')
-				]),
-			_List_fromArray(
-				[
-					function () {
-					if (maybeData.$ === 'Just') {
-						var dayData = maybeData.a;
-						var _v1 = dayData.confirmedShift;
-						if (_v1.$ === 'Just') {
-							var shift = _v1.a;
-							return A2(
-								$elm$html$Html$div,
-								_List_Nil,
-								_List_fromArray(
-									[
-										A2(
-										$elm$html$Html$span,
-										_List_fromArray(
-											[
-												$elm$html$Html$Attributes$class('font-bold')
-											]),
-										_List_fromArray(
-											[
-												$elm$html$Html$text(shift.startTime + (' - ' + shift.endTime))
-											])),
-										$author$project$Main$viewStateBadge(shift.state)
-									]));
-						} else {
-							var _v2 = dayData.request;
-							switch (_v2.$) {
-								case 'Available':
-									var req = _v2.a;
-									return A2(
-										$elm$html$Html$span,
-										_List_fromArray(
-											[
-												$elm$html$Html$Attributes$class('text-gray-500 text-xs')
-											]),
-										_List_fromArray(
-											[
-												$elm$html$Html$text('(希) ' + (req.startTime + ('-' + req.endTime)))
-											]));
-								case 'Holiday':
-									return A2(
-										$elm$html$Html$span,
-										_List_fromArray(
-											[
-												$elm$html$Html$Attributes$class('text-gray-300')
-											]),
-										_List_fromArray(
-											[
-												$elm$html$Html$text('×')
-											]));
-								default:
-									return $elm$html$Html$text('-');
-							}
-						}
-					} else {
-						return $elm$html$Html$text('-');
-					}
-				}()
-				]));
-	});
-var $author$project$Main$viewDateRows = F2(
-	function (casts, dateString) {
-		var topRow = A2(
-			$elm$html$Html$tr,
-			_List_Nil,
-			A2(
-				$elm$core$List$cons,
-				A2(
-					$elm$html$Html$td,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('border border-black bg-green-50 font-bold text-center align-middle whitespace-pre-line'),
-							$elm$html$Html$Attributes$rowspan(2)
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$formatDateShort(dateString) + ('\n(' + ($author$project$Main$getDayOfWeek(dateString) + ')')))
-						])),
-				A2(
-					$elm$core$List$map,
-					$author$project$Main$viewCellTop(dateString),
-					casts)));
-		var bottomRow = A2(
-			$elm$html$Html$tr,
-			_List_Nil,
-			A2(
-				$elm$core$List$map,
-				$author$project$Main$viewCellBottom(dateString),
-				casts));
-		return _List_fromArray(
-			[topRow, bottomRow]);
-	});
-var $author$project$Main$viewNoteCell = function (cast) {
-	return A2(
-		$elm$html$Html$td,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$class('border border-black p-2 bg-yellow-50 text-sm')
-			]),
-		_List_fromArray(
-			[
-				$elm$core$String$isEmpty(cast.note) ? $elm$html$Html$text('-') : $elm$html$Html$text(cast.note)
-			]));
-};
-var $author$project$Main$viewNotesRow = function (casts) {
-	return A2(
-		$elm$html$Html$tr,
-		_List_Nil,
-		A2(
-			$elm$core$List$cons,
-			A2(
-				$elm$html$Html$td,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$class('border border-black bg-yellow-50 font-bold text-center p-2')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('備考')
-					])),
-			A2($elm$core$List$map, $author$project$Main$viewNoteCell, casts)));
-};
-var $author$project$Main$viewUserHeader = function (cast) {
 	return A2(
 		$elm$html$Html$th,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('border border-black bg-gray-300 p-2 [writing-mode:vertical-rl] [text-orientation:upright]')
+				$elm$html$Html$Attributes$class('border border-black p-1 min-w-[80px] ' + colorClass)
 			]),
 		_List_fromArray(
 			[
-				$elm$html$Html$text(cast.name)
+				A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('font-bold text-lg leading-none')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						$author$project$Main$formatDateShort(dateStr))
+					])),
+				A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('text-sm font-normal')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text(dayOfWeek)
+					]))
+			]));
+};
+var $author$project$Main$viewTableHeader = function (dateList) {
+	return A2(
+		$elm$html$Html$thead,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$tr,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('bg-gray-100')
+					]),
+				A2(
+					$elm$core$List$cons,
+					A2(
+						$elm$html$Html$th,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('border border-black p-2 w-32 bg-gray-200')
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('名前')
+							])),
+					_Utils_ap(
+						A2($elm$core$List$map, $author$project$Main$viewDateHeaderCell, dateList),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$th,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('border border-black p-2 w-24 bg-gray-200')
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('備考')
+									]))
+							]))))
 			]));
 };
 var $author$project$Main$viewScheduleTable = F2(
 	function (dateList, casts) {
 		return A2(
-			$elm$html$Html$table,
+			$elm$html$Html$div,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$class('w-full border-collapse shadow-md')
+					$elm$html$Html$Attributes$class('overflow-x-auto')
 				]),
 			_List_fromArray(
 				[
 					A2(
-					$elm$html$Html$thead,
-					_List_Nil,
+					$elm$html$Html$table,
 					_List_fromArray(
 						[
+							$elm$html$Html$Attributes$class('w-full border-collapse border border-black text-sm')
+						]),
+					_List_fromArray(
+						[
+							$author$project$Main$viewTableHeader(dateList),
 							A2(
-							$elm$html$Html$tr,
+							$elm$html$Html$tbody,
 							_List_Nil,
 							A2(
-								$elm$core$List$cons,
-								A2(
-									$elm$html$Html$th,
-									_List_fromArray(
-										[
-											$elm$html$Html$Attributes$class('border border-black bg-gray-300 p-2')
-										]),
-									_List_fromArray(
-										[
-											$elm$html$Html$text('日付')
-										])),
-								A2($elm$core$List$map, $author$project$Main$viewUserHeader, casts)))
-						])),
-					A2(
-					$elm$html$Html$tbody,
-					_List_Nil,
-					$elm$core$List$concat(
-						_List_fromArray(
-							[
-								A2(
-								$elm$core$List$concatMap,
-								$author$project$Main$viewDateRows(casts),
-								dateList),
-								_List_fromArray(
-								[
-									$author$project$Main$viewNotesRow(casts)
-								])
-							])))
+								$elm$core$List$map,
+								$author$project$Main$viewCastRow(dateList),
+								casts))
+						]))
 				]));
 	});
 var $author$project$Main$NextWeek = {$: 'NextWeek'};
@@ -6722,7 +6708,7 @@ var $author$project$Main$viewDesktopLayout = F4(
 						]),
 					_List_fromArray(
 						[
-							$elm$html$Html$text('シフト管理（PCモード）')
+							$elm$html$Html$text('シフト管理表')
 						])),
 					A2($author$project$Main$viewWeekSelector, currentWeek, isRefreshing),
 					A2($author$project$Main$viewScheduleTable, dateList, data.users)
@@ -6746,8 +6732,8 @@ var $author$project$Main$viewError = function (maybeError) {
 	}
 };
 var $elm$html$Html$h3 = _VirtualDom_node('h3');
-var $elm$core$Basics$not = _Basics_not;
 var $elm$html$Html$strong = _VirtualDom_node('strong');
+var $elm$html$Html$span = _VirtualDom_node('span');
 var $author$project$Main$viewMobileDateRow = F2(
 	function (cast, date) {
 		var maybeData = A2($elm$core$Dict$get, date, cast.schedule);
